@@ -1,0 +1,11 @@
+create table om_order_ing_2016 as 
+select id from om_order where create_date 
+between to_date('2016-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+and to_date('2017-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS')  
+and order_state not in('10F','10C','10A','10I')
+
+
+select * from om_order_ing_2016
+
+
+

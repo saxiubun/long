@@ -1,0 +1,4 @@
+微服务report模块
+主机：10.188.38.213
+路径：/iom/micro/dc/report     
+启动：sh run.sh start prod

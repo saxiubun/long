@@ -1,0 +1,14 @@
+SELECT distinct b.SQL_TEXT,s.MACHINE,
+                   s.CLIENT_INFO,
+                   s.username,
+                   round(s.last_call_et / 60) times,
+                   'alter system kill session ''' || s.sid || ',' ||
+                   s.serial# || ''' immediate' si,
+                   s.sql_id
+                  FROM gv$session s
+                  left join v$sql b
+                  on s.SQL_ID = b.SQL_ID
+                 WHERE s.STATUS = 'ACTIVE'
+                   AND s.LAST_CALL_ET > 60 * 10
+                   AND s.type != 'BACKGROUND'
+                   AND s.USERNAME <> 'SYS'

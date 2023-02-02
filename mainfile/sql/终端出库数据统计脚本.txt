@@ -1,0 +1,45 @@
+--宽带魔百盒
+select ps.name 服务类型,a.order_code 工单编码,oo.acc_nbr 业务号码,oo.bss_sserialnumber BOSS工单号,oo.sn 设备串号,a.finish_date 竣工时间 
+from om_order a left join om_service_order oo on
+oo.id=a.id left join pm_service ps on ps.id=a.service_id
+where a.order_state='10F' 
+and a.service_id in(220373,220393,470632,480632,220413,220553,220613,630632,1260632,1250632,220196,220198,220200,220273) 
+and a.finish_date>to_date('2020-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+
+--宽带魔百盒_his
+select ps.name 服务类型,a.order_code 工单编码,oo.acc_nbr 业务号码,oo.bss_sserialnumber BOSS工单号,oo.sn 设备串号,a.finish_date 竣工时间 
+from om_order_his a left join om_service_order_his oo on oo.id=a.id 
+left join pm_service ps on ps.id=a.service_id
+where a.order_state='10F' 
+and a.service_id in(220373,220393,470632,480632,220413,220553,220613,630632,1260632,1250632,220196,220198,220200,220273) 
+and a.finish_date>to_date('2020-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+
+--组网
+select ps.name 服务类型,a.order_code 工单编码,oo.acc_nbr 业务号码,oo.bss_sserialnumber BOSS工单号,zdel.sn 设备串号,a.finish_date 竣工时间 
+from om_order a left join om_service_order oo on
+oo.id=a.id left join pm_service ps on ps.id=a.service_id 
+left join  om_group_construct_order_rela ogr on ogr.order_id=oo.id 
+left join om_group_construct_order og
+on og.id=ogr.group_order_id 
+left join ZNZW_DIV_EQUIPMENT_LIST zdel on  zdel.group_order_id = og.id
+where a.order_state='10F' and a.service_id=220613 
+and zdel.state=1 and zdel.terminal_out_flag=0
+and a.finish_date>to_date('2020-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+
+--组网_his
+select ps.name 服务类型,a.order_code 工单编码,oo.acc_nbr 业务号码,oo.bss_sserialnumber BOSS工单号,zdel.sn 设备串号,a.finish_date 竣工时间 
+from om_order_his a left join om_service_order_his oo on
+oo.id=a.id 
+left join pm_service ps on ps.id=a.service_id 
+left join om_group_construct_order_r_h ogr 
+on ogr.order_id=oo.id 
+left join om_group_construct_order_his og
+on og.id=ogr.group_order_id 
+left join ZNZW_DIV_EQUIPMENT_LIST zdel on  zdel.group_order_id = og.id
+where a.order_state='10F' and a.service_id=220613 
+and zdel.state=1 and zdel.terminal_out_flag=0
+and a.finish_date>to_date('2020-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+
+--障碍改
+select acc_nbr 业务号码,new_sn 新SM,old_sn 旧SN,create_date 创建时间 from ter_gateway_record 
+where create_date>to_date('2020-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 

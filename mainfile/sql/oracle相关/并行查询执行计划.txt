@@ -1,0 +1,302 @@
+并行查询：并行查询是通过将查询操作任务分成若干个子任务，交由多个并行服务进程（或线程）执行，以提高处理速度的方法。
+
+并行度（Degree Of Parallelism，DOP）：与单个操作关联的并行服务进程数即为并行度。并行度可以通过创建对象的DDL语句指定，也可以通过语句中的提示指定。
+
+通常，采用并行查询的目的是减少查询响应时间，而不是以降低传统性能指标（如IO、CPU）为度量标准（相反，这些数据可能会比串行执行情况下更高）。
+
+提示：参数parallel_max_servers控制最大并行服务进程数，parallel_min_servers控制最小并行服务进程数，parallel_max_servers为1则禁用并行查询。
+
+（1）PX COORDINATOR
+
+并行执行协调者，也为查询协调者（Query Coordinator，QC）。在并行查询语句的执行计划中，PX COORDINATOR是执行并行操作的第一步。
+
+在并行执行过程中，并行执行协调者是一个独立的会话（即用户会话本身），负责并行语句的初始化，并且将可并行操作分解，按照一定策略将分解后的子任务分发给并行服务会话。此外，它还承担一部分无法并行操作的任务。
+
+（2）PX SEND QC (RANDOM)
+
+并行服务进程通过表队列（Table Queue）将数据随机发送给协调者。
+
+关键词释义
+
+表队列（Table Queue，TQ）：表队列是协调者与并行服务进程之间、并行进程相互之间的数据传输通道。执行计划中的TQ字段显示了当前操作中进程之间通信所用的表队列信息。
+
+示例如代码清单2-14所示。
+
+代码清单2-14　PX COORDINATOR和PX SEND QC示例
+HELLODBA.COM>alter system set parallel_max_servers=20 scope=memory;
+System altered.
+HELLODBA.COM>exec sql_explain('select /*+parallel(t 2)*/* from t_objects t', 'TYPICAL');
+Plan hash value: 3674079550
+---------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes | Cost (%CPU)| Time | TQ |IN-OUT| PQ Distrib |
+---------------------------------------------------------------------------------------------------------------
+| 0 | SELECT STATEMENT | | 47585 | 5436K| 30 (0)| 00:00:31 | | | |
+| 1 | PX COORDINATOR | | | | | | | | |
+| 2 | PX SEND QC (RANDOM)| :TQ10000 | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,00 | P->S | QC (RAND) |
+| 3 | PX BLOCK ITERATOR | | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,00 | PCWC | |
+| 4 | TABLE ACCESS FULL| T_OBJECTS | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,00 | PCWP | |
+---------------------------------------------------------------------------------------------------------------
+
+（3）PX SEND QC (ORDER)
+
+并行服务进程通过表队列（Table Queue）将数据按序发送给协调者。
+
+（4）PX RECEIVE
+
+消费者（Consumer）通过表队列（Table Queue）接收从生产者（Producer）发送过来的数据。
+
+关键词释义
+
+生产者（Producer）/消费者（Consumer）模式：为了提高数据处理效率，并行进程被分成进程集，成对协同工作：一组负责“生产”数据行，称为“生产者”（Producer）；另一组则“消费”这些数据行，称为“消费者”。例如，在进行关联（JOIN）查询时，一组进程集从一张表中读取数据，并通过表队列（Table Queue）通道发送数据，这组进程集就是生产者；另外一组进程集则从队列通道中接收数据，并将数据与从另外一张表的数据进行关联，这组进程集就是消费者。
+
+在生产者/消费者模式下，实际需要的并行服务进程数量是指定并行度（DOP）的两倍。除了对单个表的简单查询外，大多数并行执行语句都会运行在生产者/消费者模式下。
+
+（5）PX SEND (RANGE)
+
+生产者（Producer）依照数据范围将数据分发给不同消费者（Consumer）。
+
+关键词释义
+
+数据分发（Distribution）：在并行查询中，每一个生产者进程都只会获取相互之间不重叠的一部分数据，而消费者在执行某些操作（如关联）时，需要从多个生产者获取数据，生产者就需要按照一定方式将数据分发给需要其数据的消费者。执行计划中，PQ Distrib字段表示分发方式。
+
+在并行查询中，同一个操作可能会有多个进程同时进行，因此，在执行计划中需要描述父子操作之间关系，字段IN-OUT就是显示该信息。并行操作之间关系包括：
+
+并行至串行（Parallel to Serial，P->S）：多个进程同时执行的并行操作向单个进程执行的串行操作发送数据，其数据的发送、接收需要通过表队列（Table Queue）完成。如并行服务进程向协调者发送数据。
+
+并行至并行（Parallel to Parallel，P->P）：多个进程同时执行的并行操作向多个进程同时执行的并行操作发送数据，其数据的发送、接收需要通过表队列（Table Queue）完成。如多个生产者进程向多个消费者进程分发数据。
+
+串行至并行（Serial to Parallel，S->P）：单个进程执行的串行操作向多个进程同时执行的并行操作发送数据，其数据的发送、接收需要通过表队列（Table Queue）完成。如某些情况下，并行进程的并发操作的子操作无法并行执行，或者子操作的对象太小，并行化代价大于串行代价。
+
+与父操作捆绑进行的并行操作（Parallel Combined With Parent，PCWP）：父子操作都是并行操作，但必须由同一进程完成。
+
+与子操作捆绑进行的并行操作（Parallel Combined With Child，PCWC）：父子操作都是并行操作，但必须由同一进程完成。
+
+示例如代码清单2-15所示。
+
+代码清单2-15　PX SEND QC (ORDER)、PX RECEIVE和PX SEND (RANGE)示例
+HELLODBA.COM>exec sql_explain('select /*+parallel(t 2)*/* from t_tables t order by table_name',
+'TYPICAL');
+Plan hash value: 4019464745
+-------------------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes |TempSpc| Cost (%CPU)| Time | TQ |IN-OUT| PQ Distrib |
+-------------------------------------------------------------------------------------------------------------------------
+| 0 | SELECT STATEMENT | | 2070 | 412K| | 47 (3)| 00:00:47 | | | |
+| 1 | PX COORDINATOR | | | | | | | | | |
+| 2 | PX SEND QC (ORDER) | :TQ10001 | 2070 | 412K| | 47 (3)| 00:00:47 | Q1,01 | P->S | QC (ORDER) |
+| 3 | SORT ORDER BY | | 2070 | 412K| 1288K| 47 (3)| 00:00:47 | Q1,01 | PCWP | |
+| 4 | PX RECEIVE | | 2070 | 412K| | 3 (0)| 00:00:04 | Q1,01 | PCWP | |
+| 5 | PX SEND RANGE | :TQ10000 | 2070 | 412K| | 3 (0)| 00:00:04 | Q1,00 | P->P | RANGE |
+| 6 | PX BLOCK ITERATOR | | 2070 | 412K| | 3 (0)| 00:00:04 | Q1,00 | PCWC | |
+| 7 | TABLE ACCESS FULL| T_TABLES | 2070 | 412K| | 3 (0)| 00:00:04 | Q1,00 | PCWP | |
+-------------------------------------------------------------------------------------------------------------------------
+
+（6）PX SEND (BROADCAST)
+
+生产者（Producer）将数据广播分发给所有消费者（Consumer）。
+
+（7）PX SEND (BROADCAST LOCAL)
+
+生产者（Producer）将数据广播分发给所有操作于同一分区的消费者（Consumer）。
+
+（8）PX SEND (HASH)
+
+生产者（Producer）依照哈希值将数据分发给相应的消费者（Consumer）。
+
+（9）PX SEND (HASH (BLOCK ADDRESS))
+
+生产者（Producer）依照哈希值（由数据块地址而不是数据记录中的字段数值计算得出）将数据分发给相应的消费者（Consumer）。示例如代码清单2-16所示。
+
+提示：如果要使DML语句并行化，需要激活当前会话的并行DML属性。
+
+代码清单2-16　PX SEND (HASH (BLOCK ADDRESS))示例
+HELLODBA.COM>alter session enable parallel dml;
+Session altered.
+
+HELLODBA.COM>exec sql_explain('delete /*+parallel(o)*/from t_objects o where exists (select 1 from
+t_tables t where t.owner=o.owner and t.table_name = o.object_name)','TYPICAL');
+Plan hash value: 948418918
+--------------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes | Cost (%CPU)| Time | TQ |IN-OUT| PQ Distrib |
+--------------------------------------------------------------------------------------------------------------------
+| 0 | DELETE STATEMENT | | 23 | 2300 | 15 (0)| 00:00:16 | | | |
+| 1 | PX COORDINATOR | | | | | | | | |
+| 2 | PX SEND QC (RANDOM) | :TQ10002 | 23 | 2300 | 15 (0)| 00:00:16 | Q1,02 | P->S | QC (RAND) |
+| 3 | INDEX MAINTENANCE | T_OBJECTS | | | | | Q1,02 | PCWP | |
+| 4 | PX RECEIVE | | 23 | 2300 | 15 (0)| 00:00:16 | Q1,02 | PCWP | |
+| 5 | PX SEND RANGE | :TQ10001 | 23 | 2300 | 15 (0)| 00:00:16 | Q1,01 | P->P | RANGE |
+| 6 | DELETE | T_OBJECTS | | | | | Q1,01 | PCWP | |
+| 7 | PX RECEIVE | | 23 | 2300 | 15 (0)| 00:00:16 | Q1,01 | PCWP | |
+| 8 | PX SEND HASH (BLOCK ADDRESS)| :TQ10000 | 23 | 2300 | 15 (0)| 00:00:16 | Q1,00 | P->P | HASH (BLOCK|
+| 9 | NESTED LOOPS SEMI | | 23 | 2300 | 15 (0)| 00:00:16 | Q1,00 | PCWP | |
+| 10 | PX BLOCK ITERATOR | | | | | | Q1,00 | PCWC | |
+| 11 | TABLE ACCESS FULL | T_OBJECTS | 47585 | 3531K| 15 (0)| 00:00:16 | Q1,00 | PCWP | |
+|* 12 | INDEX UNIQUE SCAN | T_TABLES_PK | 1 | 24 | 1 (0)| 00:00:02 | Q1,00 | PCWP | |
+--------------------------------------------------------------------------------------------------------------------
+Predicate Information (identified by operation id):
+---------------------------------------------------
+12 - access("T"."TABLE_NAME"="O"."OBJECT_NAME" AND "T"."OWNER"="O"."OWNER")
+
+（10）PX SEND (HYBRID (ROWID PKEY))
+
+生产者（Producer）依照ROWID和主键将数据分发给相应的消费者（Consumer）。示例如代码清单2-17所示。
+
+代码清单2-17　PX SEND (HYBRID (ROWID PKEY))示例
+HELLODBA.COM>alter session enable parallel dml;
+Session altered.
+
+HELLODBA.COM>exec sql_explain('merge /*+parallel(t 6) full(t)*/ into t_xpl t using (select
+object_id,object_name,owner from t_objects o) v on (t.tname=v.object_name) when matched then update
+set t.prop1=:1 when not matched then insert (t.tid,t.tname,t.prop2) values (v.object_id,v.object_
+name,v.owner)','TYPICAL');
+Plan hash value: 2874460846
+
+-------------------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes | Cost (%CPU)| Time | TQ |IN-OUT| PQ Distrib |
+-------------------------------------------------------------------------------------------------------------------------
+| 0 | MERGE STATEMENT | | 47585 | 11M| 57 (2)| 00:00:57 | | | |
+| 1 | PX COORDINATOR | | | | | | | | |
+| 2 | PX SEND QC (RANDOM) | :TQ10004 | 47585 | 11M| 57 (2)| 00:00:57 | Q1,04 | P->S | QC (RAND) |
+| 3 | INDEX MAINTENANCE | T_XPL | | | | | Q1,04 | PCWP | |
+| 4 | PX RECEIVE | | 47585 | 11M| 57 (2)| 00:00:57 | Q1,04 | PCWP | |
+| 5 | PX SEND RANGE | :TQ10003 | 47585 | 11M| 57 (2)| 00:00:57 | Q1,03 | P->P | RANGE |
+| 6 | MERGE | T_XPL | | | | | Q1,03 | PCWP | |
+| 7 | PX RECEIVE | | 47585 | 11M| 57 (2)| 00:00:57 | Q1,03 | PCWP | |
+| 8 | PX SEND HYBRID (ROWID PKEY)| :TQ10002 | 47585 | 11M| 57 (2)| 00:00:57 | Q1,02 | P->P | HYBRID(ROW|
+| 9 | VIEW | | | | | | Q1,02 | PCWP | |
+|* 10 | HASH JOIN RIGHT OUTER | | 47585 | 11M| 57 (2)| 00:00:57 | Q1,02 | PCWP | |
+| 11 | PX RECEIVE | | 1 | 226 | 2 (0)| 00:00:03 | Q1,02 | PCWP | |
+| 12 | PX SEND HASH | :TQ10001 | 1 | 226 | 2 (0)| 00:00:03 | Q1,01 | P->P | HASH |
+| 13 | PX BLOCK ITERATOR | | 1 | 226 | 2 (0)| 00:00:03 | Q1,01 | PCWC | |
+| 14 | TABLE ACCESS FULL | T_XPL | 1 | 226 | 2 (0)| 00:00:03 | Q1,01 | PCWP | |
+| 15 | BUFFER SORT | | | | | | Q1,02 | PCWC | |
+| 16 | PX RECEIVE | | 47585 | 1626K| 54 (0)| 00:00:55 | Q1,02 | PCWP | |
+| 17 | PX SEND HASH | :TQ10000 | 47585 | 1626K| 54 (0)| 00:00:55 | | S->P | HASH |
+| 18 | TABLE ACCESS FULL | T_OBJECTS | 47585 | 1626K| 54 (0)| 00:00:55 | | | |
+--------------------------------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+10 - access("T"."TNAME"(+)="OBJECT_NAME")
+
+（11）PX SEND (PARTITION (KEY))
+
+以分区为划分粒度，生产者（Producer）依照分区键值将数据发送给相应的消费者（Consumer）。示例如代码清单2-18所示。
+
+关键词释义
+
+并行颗粒（Granule）：并行处理中的最小工作单位。Oracle将可并行操作（如表扫描）划分为若干个颗粒，并行服务进程每次执行一个颗粒的操作。包含数据块范围（Block Range）颗粒和分区（Partition）颗粒：
+
+数据块范围（Block Range）颗粒：数据块范围颗粒是并行操作中的最基本颗粒。并行服务进程每次读取或操作一段连续的数据块。
+
+分区（Partition）颗粒： 每个并行服务进程操作一个分区或子分区。因此，这种颗粒划分情况下，分区数量决定了最大并行度。通常在对本地分区索引进行范围扫描或者分区表之间进行关联时可能会以分区为粒度。
+
+代码清单2-18　PX SEND (PARTITION (KEY))示例
+HELLODBA.COM>exec sql_explain('select /*+parallel(t 4) parallel(o 4) pq_distribute(t none partition)*/*
+　　　from t_objects_list o, t_tables_list t where o.owner=t.owner', 'TYPICAL');
+Plan hash value: 3990730760
+
+--------------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes | Cost (%CPU)| Time | Pstart| Pstop | TQ |IN-OUT| PQ Distrib |
+-------------------------------------------------------------------------------------------------------------------------------------------------
+| 0 | SELECT STATEMENT | | 7808K| 2204M| 9 (0)| 00:00:10 | | | | | |
+| 1 | PX COORDINATOR | | | | | | | | | | |
+| 2 | PX SEND QC (RANDOM) | :TQ10001 | 7808K| 2204M| 9 (0)| 00:00:10 | | | Q1,01 | P->S | QC (RAND) |
+|* 3 | HASH JOIN BUFFERED | | 7808K| 2204M| 9 (0)| 00:00:10 | | | Q1,01 | PCWP | |
+| 4 | PX PARTITION LIST ALL | | 992 | 201K| 2 (0)| 00:00:03 | 1 | 3 | Q1,01 | PCWC | |
+| 5 | TABLE ACCESS FULL | T_TABLES_LIST | 992 | 201K| 2 (0)| 00:00:03 | 1 | 3 | Q1,01 | PCWP | |
+| 6 | PX RECEIVE | | 23614 | 2029K| 7 (0)| 00:00:07 | | | Q1,01 | PCWP | |
+| 7 | PX SEND PARTITION (KEY)| :TQ10000 | 23614 | 2029K| 7 (0)| 00:00:07 | | | Q1,00 | P->P | PART (KEY) |
+| 8 | PX BLOCK ITERATOR | | 23614 | 2029K| 7 (0)| 00:00:07 | 1 | 3 | Q1,00 | PCWC | |
+| 9 | TABLE ACCESS FULL | T_OBJECTS_LIST | 23614 | 2029K| 7 (0)| 00:00:07 | 1 | 3 | Q1,00 | PCWP | |
+--------------------------------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+3 - access("O"."OWNER"="T"."OWNER")
+
+（12）PX SEND (ROUND-ROBIN)
+
+串行进程以轮询方式将数据分发给并行服务进程。示例如代码清单2-19所示。
+
+关键词释义
+
+轮询（Round Robin）：轮询是一种最简单的资源选取方式。每一次从一组资源队列中选取一个，且为上一次所选取资源的下一个资源，如果选取到了队列的末尾，则从第一个继续轮询。
+
+代码清单2-19　PX SEND (ROUND-ROBIN)示例
+HELLODBA.COM>alter session enable parallel dml;
+Session altered.
+
+HELLODBA.COM>exec sql_explain('insert /*+parallel(t_xpl)*/into t_xpl(tid) select user_id from
+t_users','TYPICAL');
+Plan hash value: 3327021059
+--------------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes | Cost (%CPU)| Time | TQ |IN-OUT|PQ Distrib |
+--------------------------------------------------------------------------------------------------------------------
+| 0 | INSERT STATEMENT | | 41 | 82 | 1 (0)| 00:00:02 | | | |
+| 1 | PX COORDINATOR | | | | | | | | |
+| 2 | PX SEND QC (RANDOM) | :TQ10001 | 41 | 82 | 1 (0)| 00:00:02 | Q1,01 | P->S | QC (RAND) |
+| 3 | LOAD AS SELECT | T_XPL | | | | | Q1,01 | PCWP | |
+| 4 | BUFFER SORT | | | | | | Q1,01 | PCWC | |
+| 5 | PX RECEIVE | | 41 | 82 | 1 (0)| 00:00:02 | Q1,01 | PCWP | |
+| 6 | PX SEND ROUND-ROBIN| :TQ10000 | 41 | 82 | 1 (0)| 00:00:02 | | S->P | RND-ROBIN |
+| 7 | INDEX FULL SCAN | T_USERS_PK | 41 | 82 | 1 (0)| 00:00:02 | | | |
+--------------------------------------------------------------------------------------------------------------------
+
+（13）PX BLOCK (ITERATOR)
+
+以数据块范围为划分粒度，对一段范围的数据块进行迭代。
+
+（14）PX PARTITION (LIST ALL)
+
+以分区为划分粒度，并行服务进程访问一个列举分区，所有分区都会被访问。
+
+（15）PX PARTITION (RANGE (ALL))
+
+以分区为划分粒度，并行服务进程访问一个范围分区，所有分区都会被访问。
+
+（16）PX PARTITION (MULTI-COLUMN)
+
+以分区为划分粒度，并行服务进程访问一个以多字段为分区键的范围分区，并对分区键做裁剪，只访问匹配的分区。
+
+（17）PX PARTITION (HASH (ALL))
+
+以分区为划分粒度，并行服务进程访问一个哈希分区，所有分区都会被访问。
+
+（18）HASH JOIN (BUFFERED)
+
+生产者（Producer）将数据分发给相同哈希值的消费者（Consumer），由消费者在私有内存中对数据进行哈希关联。
+
+（19）HASH JOIN (RIGHT SEMI BUFFERED)
+
+生产者（Producer）将数据分发给相同哈希值的消费者（Consumer），由消费者在私有内存中对数据进行哈希不完整关联操作。示例如代码清单2-20所示。
+
+代码清单2-20　HASH JOIN (RIGHT SEMI BUFFERED)示例
+HELLODBA.COM>exec sql_explain('select /*+parallel(o 2)*/* from t_objects o where exists (select
+/*+hash_sj PQ_DISTRIBUTE(t HASH HASH)*/1 from t_tables t where o.owner = t.owner and
+o.object_name = t.table_name)', 'TYPICAL');
+Plan hash value: 170661742
+--------------------------------------------------------------------------------------------------------------------
+| Id | Operation | Name | Rows | Bytes | Cost (%CPU)| Time | TQ |IN-OUT| PQ Distrib |
+------------------------------------------------------------------------------------------------------------------------------
+| 0 | SELECT STATEMENT | | 23 | 3243 | 33 (4)| 00:00:33 | | | |
+| 1 | PX COORDINATOR | | | | | | | | |
+| 2 | PX SEND QC (RANDOM) | :TQ10002 | 23 | 3243 | 33 (4)| 00:00:33 | Q1,02 | P->S | QC (RAND) |
+|* 3 | HASH JOIN RIGHT SEMI BUFFERED| | 23 | 3243 | 33 (4)| 00:00:33 | Q1,02 | PCWP | |
+| 4 | BUFFER SORT | | | | | | Q1,02 | PCWC | |
+| 5 | PX RECEIVE | | 2070 | 49680 | 2 (0)| 00:00:03 | Q1,02 | PCWP | |
+| 6 | PX SEND HASH | :TQ10000 | 2070 | 49680 | 2 (0)| 00:00:03 | | S->P | HASH |
+| 7 | INDEX FAST FULL SCAN | T_TABLES_PK | 2070 | 49680 | 2 (0)| 00:00:03 | | | |
+| 8 | PX RECEIVE | | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,02 | PCWP | |
+| 9 | PX SEND HASH | :TQ10001 | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,01 | P->P | HASH |
+| 10 | PX BLOCK ITERATOR | | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,01 | PCWC | |
+| 11 | TABLE ACCESS FULL | T_OBJECTS | 47585 | 5436K| 30 (0)| 00:00:31 | Q1,01 | PCWP | |
+--------------------------------------------------------------------------------------------------------------------
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+3 - access("O"."OWNER"="T"."OWNER" AND "O"."OBJECT_NAME"="T"."TABLE_NAME")
+
+（20）HASH JOIN (RIGHT ANTI BUFFERED)
+
+生产者（Producer）将数据分发给相同哈希值的消费者（Consumer），由消费者在私有内存中对数据进行哈希反关联操作。
+

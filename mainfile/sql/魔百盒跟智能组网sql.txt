@@ -1,0 +1,10 @@
+select a.*,rowid from tm_terminal_interface_log a where a.order_id='133104940' order by a.create_date desc;--魔百盒校验用户号码
+
+select * from tm_terminal_interface_log 
+
+select b.receive_msg, a.contact,b.account from om_service_order a join tm_terminal_interface_log b on a.id=b.order_id
+where a.contact<>b.account 
+
+select * from inf_boss_sheet
+
+select * from OM_TERMINAL_ACTIVATE_LOG--智能组网终端激活查询

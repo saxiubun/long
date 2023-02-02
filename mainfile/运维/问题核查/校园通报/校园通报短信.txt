@@ -1,0 +1,17 @@
+create table xiaoyuan_tongbao_msg(rank number,conten varchar2(2000),create_date date)
+create table xiaoyuan_tongbao_phone(phone varchar2(20),name varchar2(20));
+
+create index ran on xiaoyuan_tongbao_msg(rank)
+create index tim on xiaoyuan_tongbao_msg(create_date)
+
+select * from dc_sms_log
+
+select a.*,rowid from xiaoyuan_tongbao_phone a 
+
+select a.*,rowid from xiaoyuan_tongbao_msg a  
+
+delete from xiaoyuan_tongbao_msg
+
+drop table xiaoyuan_tongbao_msg
+
+call xiaoyuan_tongbao()

@@ -1,0 +1,7 @@
+--补充loid
+insert into  PM_LOID_EQUIPMENT(id,acc_nbr,loid,prodtype) values('134524589','18878930892','7176397643','1905');--order_id/号码 /loid
+
+select oso.id,oso.acc_nbr,oso.loid,oso.bss_sserialnumber,rowid from om_service_order oso where oso.id='135311600';
+
+
+select b.*,rowid from  PM_LOID_EQUIPMENT b where b.acc_nbr='15289531898' 

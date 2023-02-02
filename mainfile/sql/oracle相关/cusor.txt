@@ -1,0 +1,154 @@
+create or replace procedure ZYQC_P_RES_RME_PORT_WID11(v_mark_id in number,v_threacd_count in number,v_thread_no in  number) is
+begin
+   DECLARE
+       CURSOR SQL_CUR IS
+           SELECT  PORT_ID,PORT_NO,PORT_NAME,UNIT_ID,POSITION,PORT_OPR_TYPE_ID,PORT_TYPE_ID,PORT_MODEL_ID,PORT_PURPOSE,nvl(OPR_STATE_ID,'170001') as OPR_STATE_ID,MNT_STATE_ID,'0' as LINK_FLAG,ALIAS,NOTES,PARENT_ID,DELETE_TIME,'0' as DELETE_STATE,POS_X,POS_Y,GRAPH_WIDTH,GRAPH_HEIGHT,ISOFFSET,GRAPH_ID,RES_TYPE_ID,MACHINE_CHAR,PORT_RATE,LINE_TRIB,DIRECTION,WORK_MODE,EAST_WEST,EXCHANGE_MODULE_NO,SUPER_PORT_ID,IS_LOG_PORT,CUST_ID,DISPATCH_NO,LIMIT_RATE,MAXSPEED_ID,MINSPEED_ID,USE_TIME,DIS_NO,STATION_NO,CASETYPEID,PVC_SEGMENT,RES,Z_NE_ID,Z_NE_PORT_ID,MODIFY_OP,MODIRY_DATE,MODULENO_ALIAS,CUST_USER_ID,PORT_NAME_ALIAS,IS_LOCKED,PORT_NMNO,BAK_PORT_ID,SUPER_RES_TYPE,SUPER_RES_ID,A,SIGNALTYPE,ISMONITORED,SHORTCODE,XPOSITION,DIAMETER,YPOSITION,LX_NO,VOIP_ADDR,PORT_SEQ,PURPOSE,OLD_ID_EQP,OLD_SP,ROLES,CATEGORY,ISRELAY,ISCONNECTTO,MECHANICALTYPE,LOCAL_REGION_ID,SUPPER_PORT_ID,SPECIALITY_ID,OLD_LOG_TYPE,SLA,FACTORY_NO,ADSL2,HIRE_COMPACT_NO,HIRE_CONTACT_TELNUM,HIRE_ID,HIRE_LINKMAN,HIRE_MODE,HIRE_ORG_NAME,VCTRUNCK,OLD_ID_RIM,EID,HIRE_OUT_IN,TID,HIRE_BEGIN_DATE,HIRE_END_DATE,LAN_ID,CREATE_DATE,ARCHIVE_DATE,ROW_NUM,COL_NUM,CREATE_OP,SVLAN_ID,SUB_PORT,PORT_SHELF_NO,CONNECTSTATUS,STANDARD_NAME,STANDARD_CODE,IP_ADDRESS,IP_MASK,DESCRIPTION,UP_RATE,DN_RATE,PORT_DIRECTION,PORT_GROUP,IS_EXCEPTION,IS_DELETE,EMS_ORIG_RES_ID,EXCEPTION_DAYS,MNT_MAN,MAN_IN_CHARGE,WO_ID,FLOW_STATE_ID
+                  FROM TEMP_RME_PORT t where mod(regexp_replace(t.port_id,'[^0-9]',''),v_threacd_count)=v_thread_no;
+       TYPE SQL_CUR_TYPE IS TABLE OF SQL_CUR%ROWTYPE;
+       SQL_CUR_TAB SQL_CUR_TYPE;
+       log_id number:=MARK_P_RES_RME_PORT_WID11_SEQ.nextval;
+       v_deal_count number:=0;
+     BEGIN
+       open SQL_CUR;
+       insert into ZYQC_P_RES_RME_PORT_WID11_LOG(id,deal_count,state,thread_no,mark_id,begin_time,end_time,state_time) values
+       (log_id,0,'10N',v_thread_no,v_mark_id,sysdate,null,sysdate);
+       commit;
+       loop
+         fetch SQL_CUR bulk collect
+           into SQL_CUR_TAB limit 2000; --每次限定2000条
+         exit when SQL_CUR_TAB.count = 0;
+         forall i in SQL_CUR_TAB.first .. SQL_CUR_TAB.last
+           insert into RME_PORT_A(PORT_ID,PORT_NO,PORT_NAME,UNIT_ID,POSITION,PORT_OPR_TYPE_ID,PORT_TYPE_ID,PORT_MODEL_ID,PORT_PURPOSE,OPR_STATE_ID,MNT_STATE_ID,LINK_FLAG,ALIAS,NOTES,PARENT_ID,DELETE_TIME,DELETE_STATE,POS_X,POS_Y,GRAPH_WIDTH,GRAPH_HEIGHT,ISOFFSET,GRAPH_ID,RES_TYPE_ID,MACHINE_CHAR,PORT_RATE,LINE_TRIB,DIRECTION,WORK_MODE,EAST_WEST,EXCHANGE_MODULE_NO,SUPER_PORT_ID,IS_LOG_PORT,CUST_ID,DISPATCH_NO,LIMIT_RATE,MAXSPEED_ID,MINSPEED_ID,USE_TIME,DIS_NO,STATION_NO,CASETYPEID,PVC_SEGMENT,RES,Z_NE_ID,Z_NE_PORT_ID,MODIFY_OP,MODIRY_DATE,MODULENO_ALIAS,CUST_USER_ID,PORT_NAME_ALIAS,IS_LOCKED,PORT_NMNO,BAK_PORT_ID,SUPER_RES_TYPE,SUPER_RES_ID,A,SIGNALTYPE,ISMONITORED,SHORTCODE,XPOSITION,DIAMETER,YPOSITION,LX_NO,VOIP_ADDR,PORT_SEQ,PURPOSE,OLD_ID_EQP,OLD_SP,ROLES,CATEGORY,ISRELAY,ISCONNECTTO,MECHANICALTYPE,LOCAL_REGION_ID,SUPPER_PORT_ID,SPECIALITY_ID,OLD_LOG_TYPE,SLA,FACTORY_NO,ADSL2,HIRE_COMPACT_NO,HIRE_CONTACT_TELNUM,HIRE_ID,HIRE_LINKMAN,HIRE_MODE,HIRE_ORG_NAME,VCTRUNCK,OLD_ID_RIM,EID,HIRE_OUT_IN,TID,HIRE_BEGIN_DATE,HIRE_END_DATE,LAN_ID,CREATE_DATE,ARCHIVE_DATE,ROW_NUM,COL_NUM,CREATE_OP,SVLAN_ID,SUB_PORT,PORT_SHELF_NO,CONNECTSTATUS,STANDARD_NAME,STANDARD_CODE,IP_ADDRESS,IP_MASK,DESCRIPTION,UP_RATE,DN_RATE,PORT_DIRECTION,PORT_GROUP,IS_EXCEPTION,IS_DELETE,EMS_ORIG_RES_ID,EXCEPTION_DAYS,MNT_MAN,MAN_IN_CHARGE,WO_ID,FLOW_STATE_ID) 
+           values(
+                  SQL_CUR_TAB(i).PORT_ID,
+                  SQL_CUR_TAB(i).PORT_NO,
+                  SQL_CUR_TAB(i).PORT_NAME,
+                  SQL_CUR_TAB(i).UNIT_ID,
+                  SQL_CUR_TAB(i).POSITION,
+                  SQL_CUR_TAB(i).PORT_OPR_TYPE_ID,
+                  SQL_CUR_TAB(i).PORT_TYPE_ID,
+                  SQL_CUR_TAB(i).PORT_MODEL_ID,
+                  SQL_CUR_TAB(i).PORT_PURPOSE,
+                  SQL_CUR_TAB(i).OPR_STATE_ID,
+                  SQL_CUR_TAB(i).MNT_STATE_ID,
+                  SQL_CUR_TAB(i).LINK_FLAG,
+                  SQL_CUR_TAB(i).ALIAS,
+                  SQL_CUR_TAB(i).NOTES,
+                  SQL_CUR_TAB(i).PARENT_ID,
+                  SQL_CUR_TAB(i).DELETE_TIME,
+                  SQL_CUR_TAB(i).DELETE_STATE,
+                  SQL_CUR_TAB(i).POS_X,
+                  SQL_CUR_TAB(i).POS_Y,
+                  SQL_CUR_TAB(i).GRAPH_WIDTH,
+                  SQL_CUR_TAB(i).GRAPH_HEIGHT,
+                  SQL_CUR_TAB(i).ISOFFSET,
+                  SQL_CUR_TAB(i).GRAPH_ID,
+                  SQL_CUR_TAB(i).RES_TYPE_ID,
+                  SQL_CUR_TAB(i).MACHINE_CHAR,
+                  SQL_CUR_TAB(i).PORT_RATE,
+                  SQL_CUR_TAB(i).LINE_TRIB,
+                  SQL_CUR_TAB(i).DIRECTION,
+                  SQL_CUR_TAB(i).WORK_MODE,
+                  SQL_CUR_TAB(i).EAST_WEST,
+                  SQL_CUR_TAB(i).EXCHANGE_MODULE_NO,
+                  SQL_CUR_TAB(i).SUPER_PORT_ID,
+                  SQL_CUR_TAB(i).IS_LOG_PORT,
+                  SQL_CUR_TAB(i).CUST_ID,
+                  SQL_CUR_TAB(i).DISPATCH_NO,
+                  SQL_CUR_TAB(i).LIMIT_RATE,
+                  SQL_CUR_TAB(i).MAXSPEED_ID,
+                  SQL_CUR_TAB(i).MINSPEED_ID,
+                  SQL_CUR_TAB(i).USE_TIME,
+                  SQL_CUR_TAB(i).DIS_NO,
+                  SQL_CUR_TAB(i).STATION_NO,
+                  SQL_CUR_TAB(i).CASETYPEID,
+                  SQL_CUR_TAB(i).PVC_SEGMENT,
+                  SQL_CUR_TAB(i).RES,
+                  SQL_CUR_TAB(i).Z_NE_ID,
+                  SQL_CUR_TAB(i).Z_NE_PORT_ID,
+                  SQL_CUR_TAB(i).MODIFY_OP,
+                  SQL_CUR_TAB(i).MODIRY_DATE,
+                  SQL_CUR_TAB(i).MODULENO_ALIAS,
+                  SQL_CUR_TAB(i).CUST_USER_ID,
+                  SQL_CUR_TAB(i).PORT_NAME_ALIAS,
+                  SQL_CUR_TAB(i).IS_LOCKED,
+                  SQL_CUR_TAB(i).PORT_NMNO,
+                  SQL_CUR_TAB(i).BAK_PORT_ID,
+                  SQL_CUR_TAB(i).SUPER_RES_TYPE,
+                  SQL_CUR_TAB(i).SUPER_RES_ID,
+                  SQL_CUR_TAB(i).A,
+                  SQL_CUR_TAB(i).SIGNALTYPE,
+                  SQL_CUR_TAB(i).ISMONITORED,
+                  SQL_CUR_TAB(i).SHORTCODE,
+                  SQL_CUR_TAB(i).XPOSITION,
+                  SQL_CUR_TAB(i).DIAMETER,
+                  SQL_CUR_TAB(i).YPOSITION,
+                  SQL_CUR_TAB(i).LX_NO,
+                  SQL_CUR_TAB(i).VOIP_ADDR,
+                  SQL_CUR_TAB(i).PORT_SEQ,
+                  SQL_CUR_TAB(i).PURPOSE,
+                  SQL_CUR_TAB(i).OLD_ID_EQP,
+                  SQL_CUR_TAB(i).OLD_SP,
+                  SQL_CUR_TAB(i).ROLES,
+                  SQL_CUR_TAB(i).CATEGORY,
+                  SQL_CUR_TAB(i).ISRELAY,
+                  SQL_CUR_TAB(i).ISCONNECTTO,
+                  SQL_CUR_TAB(i).MECHANICALTYPE,
+                  SQL_CUR_TAB(i).LOCAL_REGION_ID,
+                  SQL_CUR_TAB(i).SUPPER_PORT_ID,
+                  SQL_CUR_TAB(i).SPECIALITY_ID,
+                  SQL_CUR_TAB(i).OLD_LOG_TYPE,
+                  SQL_CUR_TAB(i).SLA,
+                  SQL_CUR_TAB(i).FACTORY_NO,
+                  SQL_CUR_TAB(i).ADSL2,
+                  SQL_CUR_TAB(i).HIRE_COMPACT_NO,
+                  SQL_CUR_TAB(i).HIRE_CONTACT_TELNUM,
+                  SQL_CUR_TAB(i).HIRE_ID,
+                  SQL_CUR_TAB(i).HIRE_LINKMAN,
+                  SQL_CUR_TAB(i).HIRE_MODE,
+                  SQL_CUR_TAB(i).HIRE_ORG_NAME,
+                  SQL_CUR_TAB(i).VCTRUNCK,
+                  SQL_CUR_TAB(i).OLD_ID_RIM,
+                  SQL_CUR_TAB(i).EID,
+                  SQL_CUR_TAB(i).HIRE_OUT_IN,
+                  SQL_CUR_TAB(i).TID,
+                  SQL_CUR_TAB(i).HIRE_BEGIN_DATE,
+                  SQL_CUR_TAB(i).HIRE_END_DATE,
+                  SQL_CUR_TAB(i).LAN_ID,
+                  SQL_CUR_TAB(i).CREATE_DATE,
+                  SQL_CUR_TAB(i).ARCHIVE_DATE,
+                  SQL_CUR_TAB(i).ROW_NUM,
+                  SQL_CUR_TAB(i).COL_NUM,
+                  SQL_CUR_TAB(i).CREATE_OP,
+                  SQL_CUR_TAB(i).SVLAN_ID,
+                  SQL_CUR_TAB(i).SUB_PORT,
+                  SQL_CUR_TAB(i).PORT_SHELF_NO,
+                  SQL_CUR_TAB(i).CONNECTSTATUS,
+                  SQL_CUR_TAB(i).STANDARD_NAME,
+                  SQL_CUR_TAB(i).STANDARD_CODE,
+                  SQL_CUR_TAB(i).IP_ADDRESS,
+                  SQL_CUR_TAB(i).IP_MASK,
+                  SQL_CUR_TAB(i).DESCRIPTION,
+                  SQL_CUR_TAB(i).UP_RATE,
+                  SQL_CUR_TAB(i).DN_RATE,
+                  SQL_CUR_TAB(i).PORT_DIRECTION,
+                  SQL_CUR_TAB(i).PORT_GROUP,
+                  SQL_CUR_TAB(i).IS_EXCEPTION,
+                  SQL_CUR_TAB(i).IS_DELETE,
+                  SQL_CUR_TAB(i).EMS_ORIG_RES_ID,
+                  SQL_CUR_TAB(i).EXCEPTION_DAYS,
+                  SQL_CUR_TAB(i).MNT_MAN,
+                  SQL_CUR_TAB(i).MAN_IN_CHARGE,
+                  SQL_CUR_TAB(i).WO_ID,
+                  SQL_CUR_TAB(i).FLOW_STATE_ID
+           );
+        commit;
+       v_deal_count:=v_deal_count+2000;
+       update ZYQC_P_RES_RME_PORT_WID11_LOG zl set zl.deal_count=v_deal_count,zl.state_time=sysdate where zl.id=log_id;
+       commit;
+       end loop;
+       close SQL_CUR;
+       update ZYQC_P_RES_RME_PORT_WID11_LOG zl set zl.state='10F',zl.end_time=sysdate,zl.state_time=sysdate where zl.id=log_id;
+       commit;
+       end;
+end ZYQC_P_RES_RME_PORT_WID11;

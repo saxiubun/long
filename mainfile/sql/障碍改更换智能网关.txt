@@ -1,0 +1,3 @@
+障碍改更换智能网关旧终端信息查询调用BOSS接口日志
+select * from inf_log_interface where order_code='13457624919'  
+INF_TYPE=CRMProcessSheet.qryTerminalInfo

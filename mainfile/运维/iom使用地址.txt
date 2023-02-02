@@ -1,0 +1,18 @@
+http://10.184.233.77:18080/IomInterface/
+http://10.184.233.81:18080/IOMPROJ/logonForTest.jsp
+账号密码：iom/Zcft@889
+
+huangqiyang/DLalbc@889
+lurongguo/LUrg123_
+
+ kaifa1/kaifa123#@(DESCRIPTION =(ADDRESS = (PROTOCOL = TCP)(HOST = 10.188.44.87)(PORT = 1521))(CONNECT_DATA =(SERVER = DEDICATED)(SERVICE_NAME = iomcs)))
+gx_oss/zcft(1_oim@JKDB_SVC1_10.188.38.21
+gx_mobile/gx_mobile321@JKDB_SVC1_10.188.38.21
+gx_oss/gx_oss321@10.184.233.80_iom
+ydzc_pro/Pass*234@JKDB_SVC1_10.188.38.21
+gx_oss/zcft(1_oim@JKDB_SVC1_10.188.38.21
+comb_gx/comb_gx@JKDB_SVC1_10.188.38.21
+soc_hun/soc_hun123$@JKDB_SVC1_10.188.38.21
+gx_oss/gx_oss321@(DESCRIPTION =(ADDRESS = (PROTOCOL = TCP)(HOST = 10.188.44.87)(PORT = 1521))(CONNECT_DATA =(SERVER = DEDICATED)(SERVICE_NAME = iomfb)))
+
+http://10.188.38.219:8810/loginhtml/loginForTest.html

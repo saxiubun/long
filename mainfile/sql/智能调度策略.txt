@@ -1,0 +1,13 @@
+create table policy_plan_bak as (select * from pm_sa_policy_plan)
+
+
+select * from uos_tache_define where tache_name like '城域网施工（拆）%'
+select * from uos_tache_define where tache_name like 'PON网管施工（人工%'
+
+begin
+  for i in (select * from pm_sa_policy_plan) loop
+    update pm_sa_policy_plan set tache_id=i.tache_id||',19037,19059,19039' where plan_id=i.plan_id;
+    update pm_sa_policy_plan set tache_name=i.tache_name||',城域网施工（拆）,PON网管施工（人工拆）,PON网管施工（人工）' where plan_id=i.plan_id;
+    commit;
+  end loop;
+end;

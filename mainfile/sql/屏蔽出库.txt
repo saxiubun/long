@@ -1,0 +1,7 @@
+--屏蔽出库 SN码 改0，改Y
+select a.sn,a.terminal_out_flag,a.terminal_out_info,a.*,rowid from om_service_order a where a.bss_sserialnumber in(
+'77123197695359'
+); --is_terminal_out_flag 0
+select b.is_terminal_out_flag,b.*,rowid from om_so_order_rela b where b.service_order_id in(
+124140695
+); --is_terminal_out_flag Y 

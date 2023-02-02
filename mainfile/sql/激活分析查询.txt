@@ -1,0 +1,37 @@
+select (select ps.name
+          from om_order oo
+          join pm_service ps
+            on ps.id = oo.service_id
+         where oo.id = (select base_order_id
+                          from wo_work_order
+                         where id = oeor.work_order_id)) 产品类型,
+       woi.nbr 业务号码,
+       oeor.work_order_id,
+       nd.name 厂家,
+       decode(wwo.work_order_type, '10A', '正向', '反向') 流向,
+       oeor.tache_name,
+       oeor.operation_type,
+       oeor.staff_name,
+       substr(nech.rscontent, instr(nech.rscontent, 'ENDESC=', 1, 1) + 7) 报错原因,
+       nech.createtime
+  from open_error_order_record oeor
+  left join wo_order_info woi
+    on woi.yd_id = to_char(oeor.work_order_id)
+  left join wo_ne_order wno
+    on wno.order_id = woi.order_id
+  left join ne_execute_cmdinfo_history nech
+    on nech.ne_order_id = wno.ne_order_id
+  left join ne_device nd
+    on nd.device_id = wno.device_id
+  left join wo_work_order wwo
+    on oeor.work_order_id = wwo.id
+ where oeor.create_time between
+       to_date('2022-10-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS') and
+       to_date('2022-11-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+   and oeor.tache_name like 'PON%'
+   and oeor.tache_name not in ('No Error
+;')
+   and nech.createtime =
+       (select max(nec.createtime)
+          from ne_execute_cmdinfo_history nec
+         where wno.ne_order_id = nec.ne_order_id)

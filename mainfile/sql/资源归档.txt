@@ -1,0 +1,5 @@
+select * from b_g_c_to_resource_log where order_id=137634787
+MYSQL配置表
+
+10.188.38.219：3307
+gx_oss/zcft(1_oim

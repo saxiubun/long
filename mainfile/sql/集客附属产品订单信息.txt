@@ -1,0 +1,128 @@
+--千里眼
+select oso.acc_nbr 业务号码,
+       oso.bss_sserialnumber BOSS工单号,
+       oo.order_code IOM工单编码,
+       oo.id 工单id,
+       (select name from pm_service where id = oo.service_id) 产品类型,
+       ua.area_name 地市,
+       (select bc.county_name
+          from boss_country bc
+         where bc.county_code = (select a.character_value
+                                   from om_indep_prod_order_attr a
+                                  where a.character_id = 72111
+                                    and a.service_order_id = oo.id
+                                    and rownum = 1)
+           and rownum = 1) 所属区县,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72243) 业务保障级别,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72105) 集团客户编号,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72104) 集团客户名称,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72374) 期望安装地址,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72257) 安装详细地址,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72148) 集团客户经理,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72149) 集团客户经理联系电话,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72146) 集团客户级别,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72147) 集团客户服务等级,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72142) 是否同装,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72264) 关联工单,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72366) 专线产品编码,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72260) 专线产品编码组,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 522282) 硬终端序列号,
+       (select max(finish_date)
+          from wo_work_order
+         where base_order_id = 135853251
+           and rownum <= 1
+           and tache_define_id in (115873, 100045, 116170, 116171)) BOSS环节结束时间,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72382) 专线类型,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72437) 计费号,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72161) 宽带运营商,
+       (select character_value
+          from om_indep_prod_order_attr
+         where service_order_id = oo.id
+           and rownum <= 1
+           and character_id = 72166) 合同号,
+       (select osor.relatedsserialnumber 同装BOSS号
+          from om_so_order_rela osor
+         where osor.service_order_id = oo.id) 同装BOSS号,
+       (select osor.relatedacct 同装号码
+          from om_so_order_rela osor
+         where osor.service_order_id = oo.id) 同装号码
+  from om_order oo
+  join om_service_order oso
+    on oso.id = oo.id
+  left join uos_area ua
+    on ua.area_id = oo.area_id
+ where oo.service_id in
+       (220594, 220576, 220575, 220593, 240632, 230632, 220595, 220596)
+   and oo.finish_date between
+       to_date('2022-11-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS') and
+       to_date('2022-11-22 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+   and oo.create_date <
+       to_date('2022-09-21 00:00:00', 'YYYY-MM-DD HH24:MI:SS')

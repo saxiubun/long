@@ -28,3 +28,7 @@ fatal: unable to access ‘https://github.com/…’: OpenSSL SSL_read: Connecti
 产生原因：一般是这是因为服务器的SSL证书没有经过第三方机构的签署，所以才报错
 
 git config --global http.sslVerify false
+
+git推送失败提示time out ：
+可以在cmd命令中输入：ipconfig /flushdns
+刷新DNS缓存

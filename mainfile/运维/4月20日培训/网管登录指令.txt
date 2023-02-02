@@ -1,0 +1,43 @@
+select * from IOM_NE_DEVICE--查询地方网管帐号密码
+
+--------------------------华为网管登录指令
+
+先telnet对应主机 
+
+telnet 10.184.152.37 13027
+
+
+---登录：
+LOGIN:::CTAG::UN=user-name,PWD=password;
+
+样例-南宁华为网管：
+LOGIN:::CTAG::UN=kx-zhuangji,PWD=Pass*123;
+
+登录完成后复制下发指令例如：
+
+----PON 删除PON口VLAN：
+DEL-PONVLAN::OLTID=${OLTIP},PONID=NA-${FN}-${SN}-${PN},ONUIDTYPE=${ONUIDTYPE},ONUID=${ONUID}:100::UV=${Hguuv}; 
+
+样例：
+DEL-PONVLAN::OLTID=172.20.10.10,PONID=NA-0-6-1,ONUIDTYPE=PASSWORD,ONUID=5857544341:100::UV=55; 
+
+
+
+
+---PON onu删除：
+DEL-ONU::OLTID=${OLTIP},PONID=NA-${FN}-${SN}-${PN}:100::ONUIDTYPE=${AUTHTYPE},ONUID=${ONUID}; 
+
+样例：
+DEL-ONU::OLTID=172.20.10.10,PONID=NA-0-6-1:100::ONUIDTYPE=PASSWORD,ONUID=5857544341; 
+
+
+
+
+
+
+
+退出：
+LOGOUT:::CTAG::;
+
+
+

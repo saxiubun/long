@@ -1,0 +1,33 @@
+SELECT distinct A.SID,
+                T1.oracle_username 登陆账号名称,
+                T1.os_user_name 登录电脑名称,
+                ao.object_name 被锁表名,
+                decode(T1.locked_mode,
+                       0,
+                       'null',
+                       1,
+                       '空',
+                       2,
+                       'Row-S 行共享(RS)：共享表锁',
+                       3,
+                       'Row-X 行专用(RX)：用于行的修改',
+                       4,
+                       'Share 共享锁(S)：阻止其他DML操作',
+                       5,
+                       'S/Row-X 共享行专用(SRX)：阻止其他事务操作',
+                       6,
+                       'exclusive 专用(X)：独立访问使用') 死锁级别,
+                C.SQL_TEXT 执行语句,
+                'alter system kill session ''' || A.SID || ',' ||
+                A.SERIAL# || '''' || ' immediate;' as SI, -- 分别为SID和SERIAL#号
+                A.USERNAME,
+                A.MACHINE,
+                A.PROGRAM,
+                A.STATUS,
+                C.PIECE
+
+  FROM V$LOCKED_OBJECT T1, V$SESSION A, V$SQLTEXT C, dba_objects ao
+ WHERE T1.SESSION_ID = A.SID
+   AND A.SQL_ADDRESS = C.ADDRESS(+)
+   and ao.object_id = T1.object_id
+   and T1.locked_mode>3

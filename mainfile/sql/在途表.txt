@@ -1,0 +1,4 @@
+select * from  om_order a,wo_work_order_ing b where 
+a.id=b.base_order_id and b.tache_define_id=126189
+and b.party_name='中兴工号'
+and a.service_id=240632 and a.order_state not in('10F','10C','10K');

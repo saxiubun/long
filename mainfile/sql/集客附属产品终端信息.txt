@@ -1,0 +1,113 @@
+--千里眼
+select oso.bss_sserialnumber,
+       (select vendor_code
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 厂家,
+       (select model_code
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 型号,
+       (select device_code
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) SN,
+       (select device_sn
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) MAC,
+       (select install_address
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 设备地址,
+       (select installation_site
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 安装地址
+  from om_service_order oso
+  join om_order oo
+    on oo.id = oso.id
+ where oo.service_id in
+       (select id from pm_service where name like '%千里眼%')
+   and oo.finish_date between
+       to_date('2022-11-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS') and
+       to_date('2022-11-22 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+   and oo.create_date <
+       to_date('2022-09-21 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+
+--企业云视讯
+select oso.bss_sserialnumber,
+       (select device_vendor_name
+          from om_device_vendor a
+         where a.device_vendor = (select vendor_code
+                                    from om_group_finish_device
+                                   where order_id = oo.id
+                                     and rownum = 1)
+           and a.product_code = 'QYYSX'
+           and rownum = 1) 厂家,
+       (select model_code
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 型号,
+       (select device_code
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) SN,
+       (select device_sn
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) MAC,
+       (select install_address
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 设备地址,
+       (select installation_site
+          from om_group_finish_device
+         where order_id = oo.id
+           and rownum = 1) 安装地址
+  from om_service_order oso
+  join om_order oo
+    on oo.id = oso.id
+ where oo.service_id in
+       (select id from pm_service where name like '%云视讯%')
+   and oo.finish_date between
+       to_date('2022-09-16 00:00:00', 'YYYY-MM-DD HH24:MI:SS') and
+       to_date('2022-11-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+   and oo.create_date <
+       to_date('2022-09-21 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+
+--和商务TV
+select oso.bss_sserialnumber,
+       (select device_vendor_name
+          from om_device_vendor
+         where product_code = 'IPTV'
+           and device_vendor = (select device_vendor 厂家
+                                  from om_install_device
+                                 where serial_no = oso.bss_sserialnumber
+                                   and rownum = 1)) 厂家,
+       (select device_model_name
+          from om_device_model
+         where product_code = 'IPTV'
+           and device_model = (select device_model 型号
+                                 from om_install_device
+                                where serial_no = oso.bss_sserialnumber
+                                  and rownum = 1)) 型号,
+       (select device_sn SN
+          from om_install_device
+         where serial_no = oso.bss_sserialnumber
+           and rownum = 1) SN,
+       (select device_mac MAC
+          from om_install_device
+         where serial_no = oso.bss_sserialnumber
+           and rownum = 1) MAC,
+       oso.new_standard_address 设备地址,
+       oso.user_contact_address 安装地址
+  from om_service_order oso
+  join om_order oo
+    on oo.id = oso.id
+ where oo.service_id in (select id from pm_service where name like '%TV%')
+   and oo.finish_date between
+       to_date('2022-09-16 00:00:00', 'YYYY-MM-DD HH24:MI:SS') and
+       to_date('2022-11-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+   and oo.create_date <
+       to_date('2022-09-21 00:00:00', 'YYYY-MM-DD HH24:MI:SS')

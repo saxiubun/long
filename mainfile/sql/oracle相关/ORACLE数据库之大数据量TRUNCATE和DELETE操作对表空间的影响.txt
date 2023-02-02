@@ -1,0 +1,95 @@
+--1、创建测试表
+
+create table cux.cux_test_data as
+
+select * from GL_JE_HEADERS;
+
+--2、查看数据条数
+
+select count(1) from cux.cux_test_data;
+
+ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+--3、查看区块大小
+
+SELECT segment_name
+
+      ,extents
+
+      ,blocks
+
+      ,initial_extent  
+
+FROM   dba_segments
+
+WHERE  segment_name = 'CUX_TEST_DATA';
+
+ ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+--4、删除表，采用truncate方式
+
+truncate table cux.cux_test_data;
+
+--查看数据块大小
+
+SELECT segment_name
+
+      ,extents
+
+      ,blocks
+
+      ,initial_extent  
+
+FROM   dba_segments
+
+WHERE  segment_name = 'CUX_TEST_DATA';
+
+ ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+由此可见truncate会清除表所占数据块的大小；
+
+--5、删除表，采用delete方式
+
+  首先对测试表进行重新插入操作，查得数据块大小如下：
+
+ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+执行删除操作：
+
+delete from cux.cux_test_data;
+
+再次查询表所占数据块大小如下：
+
+ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+可看出，所占数据块并没有变动；
+
+--当delete完数据之后，再往测试表中插入100万条数据，再次查询数据块大小如下：
+
+ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+发现跟删除前一样，也就是说当delete相关的数据之后，再插入数据如果比删之前的数据小，则表空间分布不会变；当插入的数据比删之前多时，才会增加数据块大小；
+
+--6、采用SHRINK和MOVE方式去收缩表空间
+
+ALTER TABLE cux.cux_test_data MOVE;  --降低水位线，释放表空间
+
+注意：alter table move命令可以释放空间,该操作期间会锁表；
+
+而且会导致索引失效，如果该表有索引，还需要进行索引重建操作，重建索引脚本如下：
+
+ALTER INDEX XXX REBUILD ONLINE;  --重建索引
+
+alter table cux.cux_test_data enable row movement; --启用行迁移
+
+alter table cux.cux_test_data shrink;--降低水位线
+
+上述两步种方式收缩完之后，表空间已释放
+
+ORACLE数据库之大数据量TRUNCATE和DELETE操作对表空间的影响
+
+结论：
+
+1、TRUNCATE删除表会直接释放表空间；
+
+2、DELETE删除表不会释放表空间，若要释放，可采用SHRINK和MOVE方式进行收缩。

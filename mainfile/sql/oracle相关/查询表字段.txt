@@ -1,0 +1,6 @@
+select column_name from user_tab_columns where table_name=upper('daoshu_long')
+
+select '(select character_value from om_indep_prod_order_attr where service_order_id=oo.id and rownum<=1 and character_id='||character_id||') '||character_name ||',' from om_indep_prod_order_attr where service_order_id=129228986 
+
+select service_order_id,count(*) from om_indep_prod_order_attr where service_order_id in
+(select id from om_order where create_date>sysdate-1/2) group by service_order_id order by count(*) desc

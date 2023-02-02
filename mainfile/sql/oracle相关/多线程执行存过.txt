@@ -1,0 +1,30 @@
+DECLARE
+        v_thread_count number := 10; --并行数量
+        v_job_id       varchar2(100);
+        v_mark_id      number := MARK_P_RES_RME_PORT_WID6_SEQ.NEXTVAL;
+        v_success_count number:=0;
+      BEGIN
+        for i in 0 .. v_thread_count - 1 loop
+          dbms_job.submit(v_job_id,
+                          'ZYQC_P_RES_RME_PORT_WID6(' || v_mark_id ||','||
+                          v_thread_count ||','|| i || ');');
+          commit;
+        end loop;
+        
+        while v_success_count!=v_thread_count loop
+          select count(1)
+            into v_success_count
+            from ZYQC_P_RES_RME_PORT_WID6_LOG zl
+           where zl.mark_id = v_mark_id
+             and zl.state = '10F';
+           dbms_lock.sleep(30);
+           if sysdate-V_BEGIN_DATE>=12/24 
+             then raise_application_error('-2000','P_RES_RME_PORT_WID6在6个小时内未跑完');
+             end if;
+        end loop;
+        
+      V_END_DATE := SYSDATE;
+      INSERT INTO GX_OSS.PROCEDURE_EXE_LOG(ID,PROCEDURE_NAME,CREAT_DATE,BEGIN_DATE,END_DATE,USED_TIME) 
+      VALUES(GX_OSS.PROCEDURE_EXE_LOG_SEQ.NEXTVAL,'COMB_GX.PKG_RES_ZZFTPRK.P_RES_RME_PORT_WID6',SYSDATE,V_BEGIN_DATE,V_END_DATE,ROUND((V_END_DATE-V_BEGIN_DATE)*24*60,0));
+      COMMIT;
+      END;

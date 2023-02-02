@@ -1,0 +1,21 @@
+select max(id) from om_order where create_date 
+between to_date('2016-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+and to_date('2017-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS')  
+and order_state in('10F','10C','10A','10I')
+
+create table OM_GROUP_CONSTRUCT_ORDER_his_2016 as
+select * from OM_GROUP_CONSTRUCT_ORDER a where not exists (select * from om_order_ing_2016 b where a.id=b.id)
+and a.id<=17883789 
+
+declare
+nu:number;
+begin
+    delete from OM_GROUP_CONSTRUCT_ORDER a where not exists (select * from om_order_ing_2016 b where a.id=b.id)
+    and a.id<=17883789 nologging;
+    select count(*) into nu from OM_GROUP_CONSTRUCT_ORDER_his;
+    if sql%rowcount=nu then
+      commit;
+    else then
+        rollback;
+    end if;
+end

@@ -1,0 +1,91 @@
+create table daoshu_long_order as
+          select oo.id ID,
+          oo.order_code 工单编号,
+          utd.tache_name 环节名称,
+          wwo.id 环节ID,
+          wwo.create_date 环节开始时间,
+          wwo.finish_date 环节结束时间,
+          oo.finish_date 工单竣工时间 
+          from om_order oo
+          join wo_work_order wwo
+          on wwo.base_order_id=oo.id
+          join uos_tache_define utd
+          on utd.id=wwo.tache_define_id
+          where wwo.id=139072556
+          
+          alter table daoshu_long_order add(上个环节结束时间 date)
+
+          truncate table daoshu_long_order
+
+
+declare
+  prev_create_date date;
+  prev_finish_date date;
+begin
+  for th in (select id, finish_date
+               from om_order
+              where create_date between trunc(sysdate - 1) and
+                    trunc(sysdate)
+                and service_id in
+                    (select id from pm_service where name like '家庭宽带%')) loop
+    prev_create_date := null;
+    prev_finish_date := null;
+    for a in (select id,
+                     create_date,
+                     finish_date,
+                     (select max(id)
+                        from wo_work_order
+                       where base_order_id = th.id) w
+                from wo_work_order
+               where base_order_id = th.id order by id) loop
+      if (prev_finish_date is not null) then
+        --如果不是第一条 ,因为第一条没有上一条创建时间和结束时间
+        if (a.create_date - prev_finish_date > 10 / 1440) then
+          --不是第一条就一定会有创建时间，有下一条一定有竣工时间，所以上一条有竣工时间
+          insert into daoshu_long_order
+            select oo.id,
+                   oo.order_code,
+                   utd.tache_name,
+                   wwo.id           wwoid,
+                   wwo.create_date,
+                   wwo.finish_date,
+                   oo.finish_date   oofinish_date,
+                   prev_finish_date
+              from om_order oo
+              join wo_work_order wwo
+                on wwo.base_order_id = oo.id
+              join uos_tache_define utd
+                on utd.id = wwo.tache_define_id
+             where wwo.id = a.id; --大于十分钟的
+          commit;
+          exit; --看情况   一般来说一个工单只要有卡已完成 记录就不用在记录了 若另外还要记录环节的 需要修改
+        end if;
+      end if;
+      if (a.id = a.w) then
+        --是最后一个环节 ，最后一个环节结束时间和工单竣工时间对比
+        if (th.finish_date - a.finish_date > 10 / 1440) then
+          insert into daoshu_long_order
+            select oo.id,
+                   oo.order_code,
+                   utd.tache_name,
+                   wwo.id           wwoid,
+                   wwo.create_date,
+                   wwo.finish_date,
+                   oo.finish_date   oofinish_date,
+                   prev_finish_date
+              from om_order oo
+              join wo_work_order wwo
+                on wwo.base_order_id = oo.id
+              join uos_tache_define utd
+                on utd.id = wwo.tache_define_id
+             where wwo.id = a.id; --大于十分钟的
+          commit;
+          exit;
+        end if;
+      end if;
+      prev_create_date := a.create_date;
+      prev_finish_date := a.finish_date;
+    end loop;
+  
+  end loop;
+end;

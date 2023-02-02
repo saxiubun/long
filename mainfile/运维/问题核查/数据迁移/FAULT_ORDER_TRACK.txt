@@ -1,0 +1,22 @@
+select max(id) from om_order where create_date 
+between to_date('2016-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS') 
+and to_date('2017-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS')  
+and order_state in('10F','10C','10A','10I')
+
+create table FAULT_ORDER_TRACK_his as
+select * from FAULT_ORDER_TRACK a where not exists(select * from om_order_ing_2016 b where a.fault_order_id=b.id)
+and fault_order_id<=17883789 --and fault_order_id>=17883789--上一个年份的id
+
+declare
+nu:number;
+begin
+    delete from FAULT_ORDER_TRACK a 
+    where not exists(select * from om_order_ing_2016 b where a.fault_order_id=b.id)
+    and fault_order_id<=17883789  nologging;
+    select count(*) into nu from FAULT_ORDER_TRACK_his;
+    if sql%rowcount=nu then
+      commit;
+     else then
+        rollback;
+    end if;
+end

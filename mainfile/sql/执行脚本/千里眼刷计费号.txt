@@ -1,0 +1,112 @@
+declare
+  jfh_count     number; --生产计费号
+  jfh_his_count number; --历史计费号
+  sx_count      number; --生产属性
+  sx_his_count  number; --历史属性
+
+  yuan_jfh varchar2(255); --原计费号
+begin
+  for th in (select trim(acc_nbr) acc_nbr, trim(xuhao) xuhao
+               from linshi_long_account) loop
+    for ac in (select id
+                 from om_service_order
+                where acc_nbr = th.acc_nbr
+               union
+               select id
+                 from om_service_order_his
+                where acc_nbr = th.acc_nbr) loop
+      ------------------------------
+      --参数初始化------------------
+      jfh_count     := 0;
+      jfh_his_count := 0;
+      sx_count      := 0;
+      sx_his_count  := 0;
+      yuan_jfh      := null;
+      --参数初始化
+      ------------------------------
+    
+      ------------------------------
+      --查询千里眼是否有计费号
+      begin
+        select count(*)
+          into jfh_count
+          from om_indep_prod_order_attr
+         where service_order_id = ac.id
+           and character_id = 72437;
+      exception
+        when others then
+          null;
+      end;
+    
+      begin
+        select count(*)
+          into jfh_his_count
+          from om_indep_prod_order_attr_his
+         where service_order_id = ac.id
+           and character_id = 72437;
+      exception
+        when others then
+          null;
+      end;
+    
+      begin
+        select count(*)
+          into sx_count
+          from om_indep_prod_order_attr
+         where service_order_id = ac.id;
+      exception
+        when others then
+          null;
+      end;
+    
+      begin
+        select count(*)
+          into sx_his_count
+          from om_indep_prod_order_attr_his
+         where service_order_id = ac.id;
+      exception
+        when others then
+          null;
+      end;
+      --查询千里眼是否有计费号
+      ------------------------------
+      
+      if (jfh_count > 0 or jfh_his_count > 0) then
+        --如果有计费号则判断是生产还是历史
+        if (jfh_count > 0) then
+          --如果是生产
+          update om_indep_prod_order_attr
+             set character_value = th.xuhao
+           where service_order_id = ac.id
+             and character_id = 72437;
+          commit;
+        end if;
+        if (jfh_count > 0) then
+          --如果是历史
+          update om_indep_prod_order_attr_his
+             set character_value = th.xuhao
+           where service_order_id = ac.id
+             and character_id = 72437;
+          commit;
+        end if;
+      end if;
+      if (jfh_count <= 0 and jfh_his_count <= 0) then
+        --否则新增
+        update DAOSHU_LONG_QLY_JFH
+           set service_order_id = ac.id, character_value = th.xuhao;
+        commit;
+        if (sx_count > 0) then
+          insert into om_indep_prod_order_attr
+            select * from DAOSHU_LONG_QLY_JFH;
+          commit;
+        end if;
+        if (sx_his_count > 0) then
+          insert into om_indep_prod_order_attr_his
+            select * from DAOSHU_LONG_QLY_JFH;
+          commit;
+        end if;
+      end if;
+    
+    end loop;
+  end loop;
+end;

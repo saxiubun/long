@@ -1,0 +1,16 @@
+-- 更新后双向录音修改联系方式
+  select pl.mobile_phone, pl.*, pl.rowid
+    from pm_linkman pl
+   where exists
+   (select 1
+            from pm_cust pc
+           where pl.cust_id = pc.id
+             and exists
+           (select 1
+                    from om_order_key_info ooki
+                   where pc.cust_code = ooki.cust_code
+                     and exists
+                   (select 1
+                            from om_service_order oso
+                           where oso.id = ooki.id
+                             and oso.acc_nbr in ('a97526620716'))));
