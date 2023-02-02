@@ -23,3 +23,8 @@ git commit -m "提交的备注信息"  // 提交到仓库
 git push origin 分支 // 推送到远程仓库上
  
 git pull origin 分支// 拉取远程仓库里的分支
+
+fatal: unable to access ‘https://github.com/…’: OpenSSL SSL_read: Connection was reset, errno 10054
+产生原因：一般是这是因为服务器的SSL证书没有经过第三方机构的签署，所以才报错
+
+git config --global http.sslVerify false
