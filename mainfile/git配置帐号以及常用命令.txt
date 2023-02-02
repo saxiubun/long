@@ -1,0 +1,25 @@
+原贴：https://blog.csdn.net/vanora1111/article/details/127903572
+
+配置用户名与邮箱：
+git config --global user.name "Your Name"
+
+git config --global user.email "email"
+
+克隆项目：
+git clone  "地址" 
+
+git init // 初始化 在工作路径上创建主分支
+ 
+git clone 地址 // 克隆远程仓库
+ 
+git clone -b 分支名 地址 // 克隆分支的代码到本地
+ 
+git status // 查看状态 一般可以查看当前分支是否有冲突。也会提示你 下一步需要如何敲命令
+ 
+git add . // 将所有文件提交到暂存区
+ 
+git commit -m "提交的备注信息"  // 提交到仓库
+ 
+git push origin 分支 // 推送到远程仓库上
+ 
+git pull origin 分支// 拉取远程仓库里的分支
