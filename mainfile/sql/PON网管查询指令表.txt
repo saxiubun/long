@@ -1,0 +1,9 @@
+
+select nec.* from wo_queue_order wqo
+join wo_ne_order wno
+on wno.ne_order_id=wqo.ne_order_id
+left join wo_order_info woi
+on woi.order_id = wno.order_id
+left join ne_execute_cmdinfo_history nec
+on nec.ne_order_id=wqo.ne_order_id
+where woi.nbr='13978935252' 
