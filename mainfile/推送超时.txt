@@ -1,0 +1,7 @@
+ Failed to connect to github.com port 443 after 21110 ms: Timed out
+
+git config --global --unset http.proxy
+ 
+git config --global --unset https.proxy
+
+之后在推送
