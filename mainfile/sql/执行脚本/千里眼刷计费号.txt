@@ -10,11 +10,11 @@ begin
                from linshi_long_account) loop
     for ac in (select id
                  from om_service_order
-                where acc_nbr = th.acc_nbr
+                where bss_sserialnumber= th.acc_nbr
                union
                select id
                  from om_service_order_his
-                where acc_nbr = th.acc_nbr) loop
+                where bss_sserialnumber= = th.acc_nbr) loop
       ------------------------------
       --参数初始化------------------
       jfh_count     := 0;

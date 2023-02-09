@@ -1,0 +1,1 @@
+create index indx_gdh on temp_qly_bf(工单号)  ;
