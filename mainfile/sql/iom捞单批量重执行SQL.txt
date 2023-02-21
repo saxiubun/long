@@ -18,8 +18,8 @@ select distinct oo.id                      定单ID,
     on oo.id = oso.id
   left join om_pa_order opo
     on opo.id = oso.pa_order_id
-  left join wo_work_order wwo
-    on oso.id = wwo.base_order_id
+   join wo_work_order wwo
+    on oo.id = wwo.base_order_id
   left join uos_tache_define utd
     on wwo.tache_define_id = utd.id --工单环节关联
   left join om_order_state oos
@@ -37,6 +37,7 @@ select distinct oo.id                      定单ID,
   and (select max(y.id)
           from wo_work_order y
          where wwo.base_order_id = y.base_order_id) = wwo.id
-  and oo.create_date>trunc(sysdate)
+  and oo.create_date>trunc(sysdate-1)
   and wwo.create_date<sysdate-2/1440
   and utd.tache_name not in( '待装激活')
+  --and utd.tache_name like '%IMS%'

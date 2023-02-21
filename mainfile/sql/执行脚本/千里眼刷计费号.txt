@@ -14,7 +14,7 @@ begin
                union
                select id
                  from om_service_order_his
-                where bss_sserialnumber= = th.acc_nbr) loop
+                where bss_sserialnumber= th.acc_nbr) loop
       ------------------------------
       --参数初始化------------------
       jfh_count     := 0;
