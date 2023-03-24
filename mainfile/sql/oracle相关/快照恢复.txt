@@ -1,0 +1,1 @@
+select * from uos_user_group_party as of timestamp to_timestamp('20230323 11:00:00','yyyymmdd hh24:mi:ss') where group_id=881
