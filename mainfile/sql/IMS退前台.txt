@@ -1,0 +1,46 @@
+
+select a.order_code as 订单编码,
+       '退营业前台' 订单状态,
+       c.acc_nbr 业务号码,
+       c.bss_sserialnumber BOSS号,
+       a.create_date as 创建时间,
+       a.finish_date as 完成时间,
+       a.order_title as 业务主题,
+       ps.name as 业务类型,
+       c.user_contact_address as 地址,
+       d.area_name as 地市,
+       (select bc.county_name
+          from boss_country bc
+         where bc.county_code = (select a.character_value
+                                   from om_indep_prod_order_attr a
+                                  where a.character_id = 72111
+                                    and a.service_order_id = a.id
+                                    and rownum = 1)
+           and rownum = 1) 区县,
+       (select audit_date
+          from RETURN_ORDER_INFO b
+         where b.order_id = a.id
+           and b.state = '10P'
+           and b.audit_state = 'Y'
+           and rownum < 2) 退营业前台审批时间,
+       (select staff_name
+          from RETURN_ORDER_INFO b, uos_staff c
+         where b.order_id = a.id
+           and b.audit_staff_id = c.staff_id
+           and b.state = '10P'
+           and b.audit_state = 'Y'
+           and rownum < 2) 退营业前台审批人,
+       (select b.comments
+          from RETURN_ORDER_INFO b
+         where b.order_id = a.id
+           and b.state = '10P'
+           and b.audit_state = 'Y'
+           and rownum < 2) 退营业前台原因,
+       c.new_offer_name 新套餐名称,
+       c.old_offer_name 旧套餐名称
+  from om_order a, om_service_order c, uos_area d, pm_service ps
+ where a.service_id in (220200, 220201, 220202, 1630673, 1630674, 1630675)
+   and a.id = c.id
+   and a.area_id = d.area_id
+   and ps.id = a.service_id
+   and a.order_state = '10K'

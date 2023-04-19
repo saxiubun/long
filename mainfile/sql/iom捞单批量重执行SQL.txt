@@ -34,10 +34,10 @@ select distinct oo.id                      定单ID,
   on ua.area_id=oo.area_id
  where wwo.work_order_state not in ( '10A', '10R','10I')
   and oo.order_state not in ('10F', '10C')
-  and (select max(y.id)
-          from wo_work_order y
-         where wwo.base_order_id = y.base_order_id) = wwo.id
-  and oo.create_date>trunc(sysdate-1)
+  and (select max(id)
+          from wo_work_order
+         where base_order_id = oo.id) = wwo.id
+  and wwo.create_date>trunc(sysdate)
   and wwo.create_date<sysdate-2/1440
   and utd.tache_name not in( '待装激活')
   --and utd.tache_name like '%IMS%'
