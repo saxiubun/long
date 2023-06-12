@@ -1,0 +1,12 @@
+select sserialnumber boss号,
+acc_nbr 号码,
+decode(srv_code,01,'复机',02,'停机') 类型,
+bandwidth 带宽,
+iomstate IOM状态,
+bossstate BOSS状态,
+createdate 创建时间,
+iomfinishdate IOM竣工时间,
+bossfinishdate BOSS竣工时间,
+error_info 返回信息
+from (select * from inf_batch_stopopen_in union select * from inf_batch_stopopen_in_his)
+where acc_nbr in (select trim(acc_nbr) from linshi_long_account)

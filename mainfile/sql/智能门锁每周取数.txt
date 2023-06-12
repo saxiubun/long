@@ -1,0 +1,12 @@
+select oofw.bss_sserialnumber,
+       oofw.order_code,
+       oofw.order_title,
+       '已撤单' order_state,
+       oofw.accept_date,
+       oofw.finish_date
+  from om_order_finish_wid oofw
+ where oofw.service_id = '1630774'
+   and oofw.order_state = '10C'
+   and oofw.create_date  between
+        to_date('2023-03-30 00:00:00', 'YYYY-MM-DD HH24:MI:SS') and
+        to_date('2023-04-20 14:00:00', 'YYYY-MM-DD HH24:MI:SS');

@@ -1,0 +1,191 @@
+--3068IMS
+select oo.order_code,
+       oo.order_title,
+       oo.user_area_name,
+       oo.acc_nbr,
+       (select character_value
+          from om_indep_prod_order_attr
+         where character_id = 72090
+           and service_order_id = oo.order_id
+           and rownum = 1) 上网账号,
+       decode(oo.user_name,
+              'null',
+              null,
+              'NULL',
+              null,
+              translate(oo.user_name,
+                        substr(oo.user_name, 2, length(oo.user_name) - 1),
+                        '**')) user_name,
+       pct.cust_type_name,
+       oo.user_addr,
+       oo.exch_name,
+       oo.exch_comp,
+       oo.rate,
+       oo.accept_date,
+       oo.wo_finish_date finish_date,
+       oo.finish_date as order_finish_date,
+       oo.app_staff_name,
+       oo.book_oper_date,
+       oo.book_begin_date,
+       oo.book_end_date,
+       oo.cust_order_code,
+       decode(oo.contact_name,
+              'null',
+              null,
+              'NULL',
+              null,
+              translate(oo.contact_name,
+                        substr(oo.contact_name,
+                               2,
+                               length(oo.contact_name) - 1),
+                        '**')) contact_name,
+       oo.contact_tel,
+       oo.new_access_type,
+       oo.new_offer_name,
+       oo.party_name,
+       oo.org_name,
+       oo.mobile_tel as party_tel,
+       case
+         when (oo.town_flag in (01, 02) and oo.wo_finish_date is not null and
+              oo.wo_finish_date - oo.accept_date > 2) then
+          '超时'
+         when (oo.town_flag in (01, 02) and oo.wo_finish_date is null and
+              sysdate - oo.accept_date > 2) then
+          '超时'
+         when (oo.town_flag = 03 and oo.wo_finish_date is null and
+              sysdate - oo.accept_date > 3) then
+          '超时'
+         when (oo.town_flag = 03 and oo.wo_finish_date is not null and
+              oo.wo_finish_date - oo.accept_date > 3) then
+          '超时'
+         else
+          '未超时'
+       end as over_time_flag,
+       oo.tache_name,
+       (select oos.order_state_name
+          from om_order_state oos
+         where oos.order_state = oo.order_state) sync_order_state,
+       oo.book_org_name,
+       oo.work_result remarks,
+       oo.wo_create_date create_date,
+       oo.service_name,
+       oo.bss_sserialnumber,
+       oo.new_standard_address,
+       oo.old_standard_address,
+       oo.old_access_type,
+       round((decode(oo.wo_finish_date, null, sysdate, oo.wo_finish_date) -
+             oo.wo_create_date) * 24,
+             2) processing_time,
+       oo.sn,
+       oo.loid,
+       onu_modem onumodem,
+       olt_ip,
+       pon_id,
+       svlan,
+       cvlan,
+       port_name,
+       oo.comments order_comments,
+       nvl(oo.suspend_times, 0) as suspend_times,
+       case
+         when nvl(oo.suspend_times, 0) > 0 then
+          '是'
+         else
+          '否'
+       end as is_suspend,
+       nvl(oo.suspend_minutes, 0) as suspend_minutes,
+       oo.suspend_date,
+       oo.unsuspend_date,
+       oo.suspend_staff,
+       u.return_reason_name,
+       oo.app_comment,
+       oo.accept_staff_name as acceptStaffName,
+       oo.old_olt_factory,
+       oo.new_olt_factory,
+       oo.county,
+       oo.ott_factory,
+       oo.ott_version,
+       oo.hm_factory,
+       oo.hm_version,
+       oo.staff_exch_comp as staffExchComp,
+       decode(oo.construct_type, '0', '冷接', '1', '热熔', null) as comstructType, --施工方式
+       decode(oo.service_lv, 'high', '高品质', '普通') as userLv, --用户等级
+       oo.STAR_LEVEL,
+       oo.community_name,
+       oo.is_soft,
+       decode(oo.is_same_install, '0', '是', '1', '否', null) as is_same_install,
+       oo.gird,
+       oo.common_order_product,
+       oo.common_order_code,
+       (case
+         when oo.account4afoross is not null then
+          '是'
+         else
+          '否'
+       end) as account4afoross,
+       oo.is_xiaoyuan_brand as is_xiaoyuan_brand,
+       oo.ims_version,
+       oo.terminal_num,
+       oo.group_order_code,
+       oo.sn newSn,
+       oo.old_sn as oldSn,
+       oo.ZNZW_SERVICE_TYPE,
+       oo.znzw_plan_id,
+       oo.znzw_plan_name,
+       oo.znzw_plan_desc,
+       oo.account4afoross ACCOUNT4AFOROSSTEXT,
+       oo.recover_flag,
+       oo.PACKAGE_ID,
+       oo.PACKAGE_NAME,
+       oo.PACKAGE_DESC,
+       oo.PAY_RESULT,
+       oo.PAY_CHANNEL,
+       oo.znzw_terminal_info,
+       oo.znzw_terminal_count,
+       oo.MBH_LICENSE_PLATE, --魔百和牌照方
+       -- add by xieguangsheng
+       (select character_value
+          from om_indep_prod_order_attr a
+         where a.character_id = '522297'
+           and a.service_order_id = oo.order_id
+           and rownum = 1) PRODUCT_ITEM_ID,
+       (select character_value
+          from om_indep_prod_order_attr a
+         where a.character_id = '522296'
+           and a.service_order_id = oo.order_id
+           and rownum = 1) PRODUCT_ITEM_NAME,
+       (select character_value
+          from om_indep_prod_order_attr a
+         where a.character_id = '522295'
+           and a.service_order_id = oo.order_id
+           and rownum = 1) ORDER_MANAGER_NAME,
+       (select character_value
+          from om_indep_prod_order_attr a
+         where a.character_id = '522294'
+           and a.service_order_id = oo.order_id
+           and rownum = 1) ORDER_MANAGER_LINK_PHONE
+       -- add by xieguangsheng end
+      ,
+       case oo.IS_VOICE_ACTIVE
+         when '1' then
+          '是'
+         else
+          '否'
+       end as isVoiceActive --是否读音激活
+      ,
+       decode(ota.ACTIVATE_RESULT, '0', '否', '1', '是', null) as terminalActivate --add by huang.qiangyi 2021-05-07
+      ,
+       ota.CMEI as cmei --add by huang.qiangyi 2021-05-07
+  FROM OM_OPEN_ORDER_FINISH_WID oo
+  left join UOS_RETURN_REASON u
+    on u.id = oo.SLA_EXT_VALUE4
+  left join pm_cust_type pct
+    on pct.cust_type = oo.cust_type
+  left join OM_TERMINAL_ACTIVATE ota
+    on ota.order_id = oo.order_id --add by huang.qiangyi 20210507
+ where oo.order_state = '10F'
+   and  (oo.service_id IN (220200,220201,220202))
+   and (oo.finish_date >
+       TO_DATE('2022-12-15 00:00:00', 'YYYY-MM-DD hh24:mi:ss'))
+   AND (oo.finish_date <
+       TO_DATE('2022-12-15 23:59:59', 'YYYY-MM-DD hh24:mi:ss'))
+ order by accept_date;

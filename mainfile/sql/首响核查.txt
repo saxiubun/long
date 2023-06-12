@@ -1,0 +1,44 @@
+-- 首响核查SQL
+-- 问题：18778088272  师傅首响了，是否首响还是否
+-- 核查工单轨迹无录音拨打时长、无录音文件
+-----根据业务号码查询orderid
+select id from om_order where order_code = 'GX-058-220502-06492';
+select a.*,rowid from om_service_order a where a.acc_nbr='13557716584';
+---根据orderid查询施工单id
+select a.*,rowid from om_group_construct_order a where a.main_order_id='108857440';
+---根据施工单id查询拨打请求日志，根据返回报文获取callid
+-- inf_type = callRequest
+select a.*,rowid from inf_log_interface_20210811 a where a.order_id='16912267';
+select a.*,rowid from inf_log_interface a where a.order_id = '18153705' order by a.create_date desc;
+--核查CALLID
+select * from fault_order_track f where f.fault_order_id = '128059610' order by f.track_date desc ;
+-- 根据CALL_ID查询正表和历史，若无数据，或者无录音文件，则是对端号盾未返回数据（有数据，则需要核查mq扫描程序是否异常）
+select a.*,rowid from inf_acr_call_msg a where a.call_id='C20220503080039C0A88AB60327250522';
+select a.*,rowid from inf_acr_call_msg_his a where a.call_id='C20220503080039C0A88AB60327250522';
+
+
+
+-----投诉工单根据流水号查询callid
+select a.*,rowid from inf_log_interface a where a.order_code='GX-063-211026-4-85760' order by a.create_date desc;
+select a.*,rowid from inf_log_interface a where a.order_code in (
+'GX-058-211113-08094'
+) and a.inf_type = 'callRequest' order by a.create_date desc;
+
+
+select * from inf_log where order_code = '18897670488' order by create_date desc;
+select * from inf_log_interface where order_code = '18897670488' order by create_date desc;
+select * from inf_log where order_id = '108520089' order by create_date desc;
+select * from inf_log_interface where order_id = '108520089' order by create_date desc;
+
+
+-- 首响积压监控  2339
+select count(*) from inf_acr_call_msg f where f.state = '10I' and f.create_date > sysdate -1;
+
+select * from inf_acr_call_msg f where f.state = '10E' and f.create_date > sysdate -1 and f.error_info like '%ORA-01722: invalid number%';
+
+
+select f.call_id,f.caller_num,f.called_num,f.srfmsgid,f.state,f.create_date from inf_acr_call_msg f where f.state = '10I' and f.create_date > sysdate -1;
+
+select f.call_id,f.caller_num,f.called_num,f.srfmsgid,f.state,f.create_date,f.update_date from inf_acr_call_msg_his f where f.state = '10F' and f.create_date > sysdate -1 and rownum < 200 order by f.create_date desc;
+
+

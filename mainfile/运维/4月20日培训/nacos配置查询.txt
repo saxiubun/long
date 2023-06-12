@@ -1,0 +1,10 @@
+生产
+nacos 配置：http://10.188.38.213:25763/nacos   nacos/nacos@213@25763     
+改了后，刷新：http://10.188.44.97:25402/integrated-scheduling-config/doc.html
+
+
+测试
+nacos 配置
+测试地址：http://10.184.233.80:18081/dev/nacos/   用户名密码：nacos/nacos  
+改了后 刷新redis缓存  http://10.184.233.80:18081/test/integrated-scheduling-config/doc.html
+http://10.184.233.80:18081/test/OSSISManagement/doc.html

@@ -1,0 +1,191 @@
+select om.order_code as orderCode, --工单编码
+       om.order_title as orderTitle, --工单标题
+       om.boss_order_id as bossOrderId, --boss工单号
+       (select character_value
+          from om_indep_prod_order_attr
+         where character_id = 72090
+           and service_order_id = om.order_id
+           and rownum = 1) 上网账号,
+       om.user_area_name as userAreaName, --地市
+       om.access_type as accessType, --接入方式
+       om.acc_nbr as accNbr, --宽带号码
+       om.user_name as userName, --用户姓名
+       --om.user_lv as userLv,          --用户等级
+       om.town_flag as townFlag, --区域类型
+       om.address as address, --设备标准地址
+       om.user_addr as userAddr, --用户安装地址
+       om.exch_comp as exchComp, --代维公司
+       om.exch_name as exchNaame, --代维驻点
+       om.rate, --宽带速率
+       om.new_offer_name as newOfferName, --套餐信息
+       om.accept_date as acceptDate, --boss受理时间
+       om.accept_staff_name acceptStaffName, --受理人员及联系电话
+       om.order_create_date orderCreateDate, --boss派单时间
+       om.create_date as createDate, --到达外线时间（20200907）
+       om.finish_date as finishDate, --外线回单时间
+       om.order_finish_date as orderFinishDate, --boss归档时间
+       om.besp_date as bespDate, --前台预约时间
+       om.book_oper_date as bookOperDate, --首次拨打用户电话时间（20200907）
+       om.book_date as bookDate, --预约上门时间
+       om.book_staff_name as bookStaffName, --预约操作人
+       om.party_name as partyName, --施工人员
+       om.org_name as orgName, --施工人所在班组
+       om.staff_exch_comp as staffExchComp, --施工人所在代维公司
+       om.mobile_tel as mobileTel, --施工人联系电话
+       om.comstruct_type as comstructType, --施工方式
+       om.sn, --光猫sn码
+       om.ONU_MODEM, --ONU型号
+       om.is_suspend as isSuspend,
+       om.suspend_times as suspendTimes,
+       to_char(round(om.suspend_minutes / 60, 2), 'fm9999990.0099') as suspendMinutes,
+       om.suspend_date as suspendDate,
+       om.unsuspend_date as unsuspendDate,
+       om.suspend_staff as suspendStaff,
+       om.suspend_reason as suspendReason,
+       om.suspend_comment as suspendComment,
+       om.is_satisfied,
+       om.is_xiaoyuan_brand as is_xiaoyuan_Brand,
+       om.is_tietong_brand as is_tietong_Brand,
+       om.dk_source,
+       om.user_name4a,
+       om.community_id,
+       om.communityname as community_name,
+       om.lat_long_itude_metre,
+       
+       case
+         when om.isgigabit = '是' and om.town_flag = '城镇' then
+          om.overtime_flag_GX
+         when om.isgigabit = '是' and om.town_flag = '农村' and
+              (om.used_time_QG - nvl(om.suspend_minutes, 0) / 60 - 36) <= 0 then
+          '未超时'
+         when om.isgigabit = '否' and om.town_flag = '城镇' and
+              om.user_lv in ('高品质', '即办即装') and
+              (om.used_time_QG - nvl(om.suspend_minutes, 0) / 60 - 24) <= 0 then
+          '未超时'
+         when om.isgigabit = '否' and om.town_flag = '农村' and
+              om.user_lv in ('高品质', '即办即装') and
+              (om.used_time_QG - nvl(om.suspend_minutes, 0) / 60 - 36) <= 0 then
+          '未超时'
+         when om.isgigabit = '否' and om.town_flag = '城镇' and
+              om.user_lv in ('普通') and
+              (om.used_time_QG - nvl(om.suspend_minutes, 0) / 60 - 48) <= 0 then
+          '未超时'
+         when om.isgigabit = '否' and om.town_flag = '农村' and
+              om.user_lv in ('普通') and
+              (om.used_time_QG - round(nvl(om.suspend_minutes, 0) / 60, 2) - 72) <= 0 then
+          '未超时'
+         else
+          '超时'
+       end as overtimeFlag,
+       
+       om.used_time_QG as usedTime,
+       to_char((om.used_time_QG - round(nvl(om.suspend_minutes, 0) / 60, 2)),
+               'fm9999990.0099') as usedTimeNS,
+       
+       to_char(ga.gigaalltime, 'fm9999990.0099') as allTimes, --千兆全流程时长（20200907）
+       om.work_result as workResult,
+       om.comments,
+       om.pic_num as picNum,
+       om.is_telepro,
+       om.village,
+       om.starLv as STAR_LEVEL,
+       om.communityName as communityName,
+       om.gird,
+       om.county,
+       om.common_order_product,
+       om.common_order_code,
+       om.account4afoross,
+       om.attach,
+       om.eqpCompany as eqp_company,
+       om.oltCompany as olt_company,
+       om.firstTimeoutReason,
+       om.secondTimeoutReason,
+       om.workCode,
+       --om.firstContactCustomerDate,
+       om.firstBookDurationIsTimeOut, --首次响应是否超时（20200907）
+       decode(substr(firstBookDuration, 1, 1),
+              '.',
+              '0' || firstBookDuration,
+              firstBookDuration) as firstBookDuration, --首次响应时长（20200907）
+       om.boxAddress,
+       om.signDate as SIGN_DATE,
+       om.signFaceRecognitionInfo as SIGN_FACE_RECOGNITION_INFO,
+       om.oldAddress,
+       om.recoverFlag as RECOVER_FLAG,
+       decode(om.is_have_paxc, '1', '是', '否') as is_have_paxc,
+       om.shop_name,
+       case
+         when om.shop_name is not null then
+          '是'
+         else
+          '否'
+       end as shop_flag,
+       ocd.construct_diff,
+       ocd.difficult_scene_name as dif_scene,
+       --decode(om.is_giga_bit_vip,'Y',  '是', '否') as isGigaBitVip
+       om.customer_urge as customerUrge,
+       vogr.offer_name as offerName,
+       vogr.create_date as offerTime,
+       osor.user_quality,
+       ocdd.expect_min,
+       to_char(round((ocdd.end_time - ocdd.create_time) * 24 * 60, 2),
+               'fm9990.0099') as extime
+  from OM_ORDER_HB_INSTALL_DETAIL om
+  left join giga_alltime ga
+    on ga.id = om.order_id
+  left join VIP_OFFER_GIVE_RECORD vogr
+    on vogr.ORDER_ID = om.ORDER_ID
+   AND vogr.RESULT = 1
+  left join om_group_construct_order_rela ogcor
+    on om.order_id = ogcor.order_id
+  left join om_so_order_rela osor
+    on osor.service_order_id = om.order_id
+  left join (select *
+               from (select b.*,
+                            (row_number()
+                             over(partition by b.order_id order by
+                                  b.create_date desc)) px
+                       from om_construct_difficult b) e
+              where px = 1) ocd
+    on om.order_id = ocd.order_id
+  left join (select *
+               from (select c.*,
+                            (row_number()
+                             over(partition by c.cons_order_id order by c.id desc)) pxl
+                       from OM_CONS_INSTALL_TIMING_INFO c) d
+              where pxl = 1) ocdd
+    on ocdd.cons_order_id = ogcor.group_order_id
+ where 1 = 1
+   and om.date_time between
+       to_date('2023-03-23 00:00:00', 'yyyy-mm-dd hh24:mi:ss') and
+       to_date('2023-03-29 23:59:59', 'yyyy-mm-dd hh24:mi:ss')
+ order by decode(user_area_name,
+                 '南宁',
+                 1,
+                 '桂林',
+                 2,
+                 '柳州',
+                 3,
+                 '玉林',
+                 4,
+                 '百色',
+                 5,
+                 '河池',
+                 6,
+                 '贵港',
+                 7,
+                 '钦州',
+                 8,
+                 '梧州',
+                 9,
+                 '北海',
+                 10,
+                 '崇左',
+                 11,
+                 '来宾',
+                 12,
+                 '贺州',
+                 13,
+                 '防城港',
+                 14,
+                 15) asc

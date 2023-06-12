@@ -1,0 +1,59 @@
+ 
+       
+      --select * from  fault_report_title o where o.report_id='201812208';
+      
+      
+      --firstInstallSuccessDetail
+      proc_lowterminal_wid; --低质终端整改报表详表
+      PROC_QUIT_ORDER_REBACK_DETAIL; --3084装移机撤单统计报表
+      proc_terminal_change_detail; --3171终端更换统计报表详情
+      image_quality_report        --3166工单图片智能质检率分析报表
+    hbInstallTimelinessDetail2  proc_hbInstall_detail1    --3060
+  
+      proc_hbInstall_timeliness1
+      
+      PROC_OPENING_ORDER_LIST_NEW3
+        
+
+      --报表
+      select a.*, a.rowid from fault_report a where a.report_code = 'openingWorkOrderList';         
+       
+      --查SQL
+      PROC_OPENING_ORDER_LIST_NEW3      
+      
+      --报表字段
+     select * from fault_report_field o where o.report_id = '20150706';
+
+      --报表日志
+        select *
+          from report_sql_log o                                        --  3084    10261111  全区撤单数量  3060 201612189（详表）201612186（汇总）              
+         where o.id = '20150706'
+           and o.creat_date > sysdate - 99 / 1440
+         order by o.creat_date desc;
+         
+         
+         
+         
+         
+         select * from om_xw_timely_rate_wid a where a.create_date between
+       to_date('2022/03/29 00:00:00', 'YYYY/MM/DD HH24:mi:ss') and
+       to_date('2022/03/30 23:59:59', 'YYYY/MM/DD HH24:MI:SS')
+ order by a.create_date desc 
+         
+         
+         
+ 
+ 
+ 
+ 
+ 
+-- 3170报表
+-- workOrderListZAG
+
+select * from fault_report o where o.report_name like '%障碍终端更换一览表%';
+select * from fault_report o where o.report_code = 'workOrderListZAG';
+PROC_WORK_ORDER_LIST_ZAG 
+select * from  REPORT_SQL_LOG f where f.ID='201911080' order by f.creat_date desc;
+
+
+
