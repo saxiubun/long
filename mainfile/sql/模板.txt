@@ -1,5 +1,0 @@
---激活模板
-select * from inf_data_bus_jk i where i.data_bus_code='INF_RES0303';
---模板，如：激活模板，接口模板
-select * from inf_data_template;
-select * from inf_data_template_jk o where o.template_name like '%资源%';

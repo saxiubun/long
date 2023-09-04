@@ -1,2 +1,0 @@
-select * from om_order_his where service_id in(select id from pm_service where name like '%扩容%')
-select * from om_order where order_code='KR-NN-20220726151319-5240'

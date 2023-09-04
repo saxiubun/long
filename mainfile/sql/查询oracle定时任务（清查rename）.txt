@@ -1,1 +1,0 @@
-select a.*,rowid from user_jobs  a where a.JOB='3423'

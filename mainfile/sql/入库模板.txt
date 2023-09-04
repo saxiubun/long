@@ -1,2 +1,0 @@
-select * from gx_oss.inf_data_template a where a.id = 20180412--政企
-select * from gx_oss.inf_data_template a where a.id = 201510--BOSS

@@ -1,1 +1,0 @@
-select * from uos_config where name = 'MBH_ACT_GUIDE_PIC_URL';

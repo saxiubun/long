@@ -1,3 +1,0 @@
-select * from om_so_party a where a.service_order_id=135439899;--36060112
-         
-         select * from pm_cust where id=36060112

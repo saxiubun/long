@@ -1,7 +1,0 @@
-select oo.*,oso.id from om_order oo
-left join pm_service ps
-on ps.id=oo.service_id
-join om_service_order oso
-on oso.id=oo.id
-where ps.name like '家庭宽带%'
-and oso.object_type='007'

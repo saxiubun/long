@@ -1,3 +1,0 @@
-select a.*,a.rowid from om_order a where order_code ='GX-058-230319-00946'
-select a.*,a.rowid from wo_work_order_ing a where base_order_id='149613120'
-select a.*,a.rowid from wo_work_order a where base_order_id='149613120'

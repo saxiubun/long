@@ -1,2 +1,0 @@
- --千里眼改串号,地址     订单id
-select o.order_id,o.device_code,o.product_code,o.staff_id,o.install_address,rowid from om_group_finish_device o where o.order_id in('78212448889017'); 

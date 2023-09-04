@@ -1,1 +1,0 @@
-select * from INF_LOG a where create_date>trunc(sysdate-1)and  inf_type='StartCidFlow.startCidFlow' order by create_date

@@ -1,2 +1,0 @@
-3. IOM系统 184网段
-http://10.184.233.80:18080/IOMPROJ/logon.jsp      iom/iom56789

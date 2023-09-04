@@ -1,5 +1,0 @@
-/iom/micro/dc/ydzc-problem/logs
-
-八桂彩云调用登录接口：调用的接口的NACOS配置
-DataId：UBAN_APP_INFO
-Namespace：BGCY

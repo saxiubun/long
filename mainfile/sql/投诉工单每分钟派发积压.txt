@@ -1,8 +1,0 @@
-select to_char(create_date,'YYYY-MM-DD HH24:MI'),count(*) 派单量 from inf_eoms_sheet where  create_date>sysdate-10/1440
-group by to_char(create_date,'YYYY-MM-DD HH24:MI');
-
-select to_char(create_date,'YYYY-MM-DD HH24:MI'),count(*) 入库量 from inf_eoms_sheet where state='10F' and create_date>sysdate-10/1440
-group by to_char(create_date,'YYYY-MM-DD HH24:MI') order by to_char(create_date,'YYYY-MM-DD HH24:MI') desc
-
-select to_char(create_date,'YYYY-MM-DD HH24:MI'),count(*) 积压量 from inf_eoms_sheet where state='10I' and create_date>sysdate-10/1440
-group by to_char(create_date,'YYYY-MM-DD HH24:MI') order by to_char(create_date,'YYYY-MM-DD HH24:MI') desc

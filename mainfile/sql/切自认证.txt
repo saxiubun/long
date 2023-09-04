@@ -1,2 +1,0 @@
-切自认证
-SELECT VALUE FROM UOS_CONFIG WHERE NAME = '4aValidateTicketSwitch'

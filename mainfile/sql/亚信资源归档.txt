@@ -1,1 +1,0 @@
-select * from b_g_c_to_resource_log where order_id=137634787

@@ -1,1 +1,0 @@
-gx_oss.proc_save_res_onu_info

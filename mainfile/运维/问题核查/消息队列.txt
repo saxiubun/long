@@ -1,1 +1,0 @@
-http://10.184.233.80:18080/IOMPROJ/monitor/jmsMonitor.jsp

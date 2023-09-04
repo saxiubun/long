@@ -1,6 +1,0 @@
-78、79、42、43  报表主机
-核查方法：
-top命令检查会发现有个报表进程cup高
-ps -ef | grep REPORT  可以看到进程信息和路径信息
-kill掉进程
-在 REPORT/bin 目录下执行 nohup ./run.sh>/dev/null 2>&1 &  重启报表

@@ -1,1 +1,0 @@
-select * from os_public p where p.pkey = 'Enum_OnuType'

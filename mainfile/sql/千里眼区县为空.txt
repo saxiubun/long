@@ -1,1 +1,0 @@
-   select a.*,a.rowid from om_so_sla a where service_order_id  in(select id from om_service_order where acc_nbr='70312')

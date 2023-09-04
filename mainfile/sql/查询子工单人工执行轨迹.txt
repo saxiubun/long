@@ -1,9 +1,0 @@
-select 'subFlag' as sub_flag,
-       f.org_name,
-       f.staff_name,
-       to_char(f.create_time, 'yyyy-mm-dd hh24:mi:ss') as createDate,
-       f.operation_type,
-       f.record_comment
-  from open_error_order_record f
- where f.work_order_id = 527470049
- order by id
