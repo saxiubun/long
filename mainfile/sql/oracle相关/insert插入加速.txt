@@ -1,6 +1,6 @@
 insert /*+ append parallel(a, 4) nologging */ 
 into target_table a 
-select /*+ parallel(b, 4) */ * 
+select /*+ parallel(4) */  * 
 from source_table b; 
 
 APPEND的作用是在表的高水位上分配空间,不去寻找 freelist 中的free block , 直接在table HWM 上面加入数据； 

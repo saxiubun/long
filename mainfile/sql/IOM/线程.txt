@@ -1,0 +1,600 @@
+create or replace procedure daoshu_long_mut_thread(mark_id      in number,
+                                                   thread_count in number,
+                                                   thread_no    in number) is
+begin
+  declare
+    v_id       number := DAOSHU_LONG_SEQUE.NEXTVAL;
+    num        number := 0;
+    begin_date date := sysdate;
+    coun       number := 0;
+    err        varchar2(4000);
+    ---------
+    new_date    date; --最新日期
+    new_cod     varchar2(255); --最新工单编号
+    new_huanjie varchar2(255);
+  
+    new_yiji_date    date; --移机
+    new_yiji         varchar2(255);
+    new_yiji_huanjie varchar2(255);
+  
+    new_chaiji_date    date; --拆机
+    new_chaiji         varchar2(255);
+    new_chaiji_huanjie varchar2(255);
+  
+    new_tingji_date    date;
+    new_tingji         varchar2(255);
+    new_tingji_huanjie varchar2(255);
+  
+    new_fuji_date    date;
+    new_fuji         varchar2(255);
+    new_fuji_huanjie varchar2(255);
+  
+  begin
+  
+    insert into daoshu_long_log
+      (id, mark_id, thread_no, nu, state, begin_date)
+    values
+      (v_id, mark_id, thread_no, num, '10I', begin_date);
+    commit;
+    --记得取mod
+  
+    for acc in (select acc_nbr
+                  from linshi_long_account
+                 where mod(acc_nbr, thread_count) = thread_no) loop
+      new_date        := to_date('2000-01-01 00:00:00',
+                                 'YYYY-MM-DD HH24:MI:SS');
+      new_yiji_date   := to_date('2000-01-01 00:00:00',
+                                 'YYYY-MM-DD HH24:MI:SS');
+      new_chaiji_date := to_date('2000-01-01 00:00:00',
+                                 'YYYY-MM-DD HH24:MI:SS');
+      new_tingji_date := to_date('2000-01-01 00:00:00',
+                                 'YYYY-MM-DD HH24:MI:SS');
+      new_fuji_date   := to_date('2000-01-01 00:00:00',
+                                 'YYYY-MM-DD HH24:MI:SS');
+    
+      new_cod    := '';
+      new_yiji   := '';
+      new_chaiji := '';
+      new_tingji := '';
+      new_fuji   := '';
+    
+      new_huanjie        := '';
+      new_chaiji_huanjie := '';
+      new_yiji_huanjie   := '';
+      new_tingji_huanjie := '';
+      new_fuji_huanjie   := '';
+    
+      coun := 0;
+    
+      select count(*)
+        into coun
+        from om_service_order
+       where acc_nbr = acc.acc_nbr;
+      begin
+        if (coun > 0) then
+          for th in (select id
+                       from om_service_order
+                      where acc_nbr = acc.acc_nbr) loop
+          
+            coun := 0;
+            select count(*) into coun from om_order where id = th.id;
+            begin
+              if (coun > 0) then
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%新装%')) loop
+                  
+                    if (a.create_date > new_date and
+                       a.create_date is not null) then
+                      new_date := a.create_date;
+                      new_cod  := a.order_code;
+                      select utd.tache_name
+                        into new_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%移%')) loop
+                  
+                    if (a.create_date > new_yiji_date and
+                       a.create_date is not null) then
+                      new_yiji_date := a.create_date;
+                      new_yiji      := a.order_code;
+                      select utd.tache_name
+                        into new_yiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%拆%')) loop
+                  
+                    if (a.create_date > new_chaiji_date and
+                       a.create_date is not null) then
+                      new_chaiji_date := a.create_date;
+                      new_chaiji      := a.order_code;
+                      select utd.tache_name
+                        into new_chaiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+              end if;
+            exception
+              when others then
+                err := sqlerrm;
+            end;
+            coun := 0;
+            select count(*) into coun from om_order_his where id = th.id;
+            begin
+              if (coun > 0) then
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order_his
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%新装%')) loop
+                  
+                    if (a.create_date > new_date and
+                       a.create_date is not null) then
+                      new_date := a.create_date;
+                      new_cod  := a.order_code;
+                      select utd.tache_name
+                        into new_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order_his
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%移%')) loop
+                  
+                    if (a.create_date > new_yiji_date and
+                       a.create_date is not null) then
+                      new_yiji_date := a.create_date;
+                      new_yiji      := a.order_code;
+                      select utd.tache_name
+                        into new_yiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order_his
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%拆%')) loop
+                  
+                    if (a.create_date > new_chaiji_date and
+                       a.create_date is not null) then
+                      new_chaiji_date := a.create_date;
+                      new_chaiji      := a.order_code;
+                      select utd.tache_name
+                        into new_chaiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+              end if;
+            exception
+              when others then
+                err := sqlerrm;
+            end;
+          
+          end loop;
+        end if;
+      exception
+        when others then
+          err := sqlerrm;
+      end;
+      coun := 0;
+      select count(*)
+        into coun
+        from om_service_order_his
+       where acc_nbr = acc.acc_nbr;
+      begin
+        if (coun > 0) then
+          for th in (select id
+                       from om_service_order_his
+                      where acc_nbr = acc.acc_nbr) loop
+            coun := 0;
+            select count(*) into coun from om_order where id = th.id;
+            begin
+              if (coun > 0) then
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%新装%')) loop
+                  
+                    if (a.create_date > new_date and
+                       a.create_date is not null) then
+                      new_date := a.create_date;
+                      new_cod  := a.order_code;
+                      select utd.tache_name
+                        into new_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%移%')) loop
+                  
+                    if (a.create_date > new_yiji_date and
+                       a.create_date is not null) then
+                      new_yiji_date := a.create_date;
+                      new_yiji      := a.order_code;
+                      select utd.tache_name
+                        into new_yiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%拆%')) loop
+                  
+                    if (a.create_date > new_chaiji_date and
+                       a.create_date is not null) then
+                      new_chaiji_date := a.create_date;
+                      new_chaiji      := a.order_code;
+                      select utd.tache_name
+                        into new_chaiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+              end if;
+            exception
+              when others then
+                err := sqlerrm;
+            end;
+            coun := 0;
+            select count(*) into coun from om_order_his where id = th.id;
+            begin
+              if (coun > 0) then
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order_his
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%新装%')) loop
+                  
+                    if (a.create_date > new_date and
+                       a.create_date is not null) then
+                      new_date := a.create_date;
+                      new_cod  := a.order_code;
+                      select utd.tache_name
+                        into new_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order_his
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%移%')) loop
+                  
+                    if (a.create_date > new_yiji_date and
+                       a.create_date is not null) then
+                      new_yiji_date := a.create_date;
+                      new_yiji      := a.order_code;
+                      select utd.tache_name
+                        into new_yiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+                begin
+                  for a in (select id, order_code, create_date, service_id
+                              from om_order_his
+                             where id = th.id
+                               and service_id in
+                                   (select id
+                                      from pm_service
+                                     where name like '%拆%')) loop
+                  
+                    if (a.create_date > new_chaiji_date and
+                       a.create_date is not null) then
+                      new_chaiji_date := a.create_date;
+                      new_chaiji      := a.order_code;
+                      select utd.tache_name
+                        into new_chaiji_huanjie
+                        from wo_work_order wwo
+                        join uos_tache_define utd
+                          on utd.id = wwo.tache_define_id
+                       where base_order_id = a.id
+                         and wwo.id =
+                             (select max(id)
+                                from wo_work_order
+                               where base_order_id = a.id);
+                    end if;
+                  end loop;
+                exception
+                  when others then
+                    err := sqlerrm;
+                end;
+              end if;
+            exception
+              when others then
+                err := sqlerrm;
+            end;
+          
+          end loop;
+        end if;
+      exception
+        when others then
+          err := sqlerrm;
+      end;
+      coun := 0;
+      select count(*)
+        into coun
+        from inf_batch_stopopen_in
+       where acc_nbr = acc.acc_nbr;
+      begin
+        if (coun > 0) then
+          for th in (select sserialnumber,
+                            createdate,
+                            srv_code,
+                            iomfinishdate,
+                            bossfinishdate
+                       from inf_batch_stopopen_in
+                      where acc_nbr = acc.acc_nbr) loop
+          
+            if (th.srv_code = '01' and th.createdate > new_fuji_date and
+               th.createdate is not null) then
+              new_fuji_date    := th.createdate;
+              new_fuji         := th.sserialnumber;
+              new_fuji_huanjie := '';
+              if (th.iomfinishdate is null) then
+                new_fuji_huanjie := new_fuji_huanjie || 'IOM未完成';
+              end if;
+              if (th.bossfinishdate is null) then
+                new_fuji_huanjie := new_fuji_huanjie || 'BOSS未完成';
+              end if;
+            end if;
+            if (th.srv_code = '02' and th.createdate > new_tingji_date and
+               th.createdate is not null) then
+              new_tingji_date    := th.createdate;
+              new_tingji         := th.sserialnumber;
+              new_tingji_huanjie := '';
+              if (th.iomfinishdate is null) then
+                new_tingji_huanjie := new_tingji_huanjie || 'IOM未完成';
+              end if;
+              if (th.bossfinishdate is null) then
+                new_tingji_huanjie := new_tingji_huanjie || 'BOSS未完成';
+              end if;
+            end if;
+          
+          end loop;
+        end if;
+      exception
+        when others then
+          err := sqlerrm;
+      end;
+      coun := 0;
+      select count(*)
+        into coun
+        from inf_batch_stopopen_in_his
+       where acc_nbr = acc.acc_nbr;
+      begin
+        if (coun > 0) then
+          for th in (select sserialnumber,
+                            createdate,
+                            srv_code,
+                            iomfinishdate,
+                            bossfinishdate
+                       from inf_batch_stopopen_in_his
+                      where acc_nbr = acc.acc_nbr) loop
+            if (th.srv_code = '01' and th.createdate > new_fuji_date and
+               th.createdate is not null) then
+              new_fuji_date    := th.createdate;
+              new_fuji         := th.sserialnumber;
+              new_fuji_huanjie := '';
+              if (th.iomfinishdate is null) then
+                new_fuji_huanjie := new_fuji_huanjie || 'IOM未完成';
+              end if;
+              if (th.bossfinishdate is null) then
+                new_fuji_huanjie := new_fuji_huanjie || 'BOSS未完成';
+              end if;
+            end if;
+            if (th.srv_code = '02' and th.createdate > new_tingji_date and
+               th.createdate is not null) then
+              new_tingji_date    := th.createdate;
+              new_tingji         := th.sserialnumber;
+              new_tingji_huanjie := '';
+              if (th.iomfinishdate is null) then
+                new_tingji_huanjie := new_tingji_huanjie || 'IOM未完成';
+              end if;
+              if (th.bossfinishdate is null) then
+                new_tingji_huanjie := new_tingji_huanjie || 'BOSS未完成';
+              end if;
+            end if;
+          end loop;
+        end if;
+      exception
+        when others then
+          err := sqlerrm;
+      end;
+      insert into daoshu_long
+      values
+        (acc.acc_nbr,
+         new_chaiji,
+         new_chaiji_huanjie,
+         new_cod,
+         new_huanjie,
+         new_yiji,
+         new_yiji_huanjie,
+         new_tingji,
+         new_tingji_huanjie,
+         new_fuji,
+         new_fuji_huanjie);
+      commit;
+    
+    end loop;
+  
+    update daoshu_long_log
+       set nu = num, state = '10F', end_date = sysdate
+     where id = v_id;
+    commit;
+  
+  end;
+end daoshu_long_mut_thread;

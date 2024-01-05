@@ -1,0 +1,15 @@
+--重新调度  inf_complaints_msg
+update gx_oss.INF_COMPLAINTS_MSG a set state='10I'where a.order_id in (select id from gx_oss.om_order aa where aa.order_code in ('GX-058-220929-01722',
+'GX-058-220906-04536',
+'GX-058-220816-07636',
+'GX-058-220629-06954',
+'GX-058-220905-09883',
+'GX-058-220920-03120',
+'GX-058-220914-03391',
+'GX-058-220728-01193',
+'GX-058-220916-08148',
+'GX-058-220909-08614',
+'GX-058-220530-00061',
+'GX-058-220816-07235',
+'GX-058-220601-07810'));
+commit;

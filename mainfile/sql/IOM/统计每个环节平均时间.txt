@@ -1,0 +1,12 @@
+select * from pm_service where name like '%家庭宽带%'
+
+
+select c,round(sum(a)/count(*),2) from (
+select utd.tache_name c,ROUND(TO_NUMBER(wwo.finish_date - wwo.create_date) * 24 * 60,2) a from wo_work_order wwo
+join uos_tache_define utd
+on utd.id=wwo.tache_define_id
+join om_order oo
+on oo.id=wwo.base_order_id
+where utd.tache_name not like '%外线%'
+and oo.finish_date>trunc(sysdate-30) and oo.service_id=220196)
+group by c

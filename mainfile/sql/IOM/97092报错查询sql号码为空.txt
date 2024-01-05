@@ -1,0 +1,22 @@
+select lan.id,lan.acc_nbr,
+       case
+         when ld.valid_date < trunc(sysdate - 1) then
+          trunc(sysdate - 1)
+         else
+          ld.valid_date
+       end valid_date,
+       case
+         when ld.invalid_date >= trunc(sysdate - 1 + 1) then
+          trunc(sysdate - 1 + 1) - 1 / 24 / 60 / 60
+         else
+          ld.invalid_date
+       end invalid_date,
+       ld.*,
+       lan.*
+  from lgf_detail ld
+  join lgf_acc_nbr lan
+    on lan.batch_id = ld.batch_id
+ where ld.invalid_date >= trunc(sysdate - 1)
+   and ld.valid_date < trunc(sysdate - 1) + 1
+   and lan.acc_nbr is null;
+   

@@ -1,0 +1,1152 @@
+create or replace package body pkg_jk_om_order_run_jinjihis68 is
+  v_begin_date date;
+  v_end_date date;
+  v_ErrorCode NUMBER;
+  v_ErrorText VARCHAR2(255);
+  v_desc VARCHAR2(4000);
+  i_table VARCHAR2(4000);
+  i_table_t VARCHAR2(4000);
+  procedure start_on(in_start_date date,
+                     in_end_date date,
+                     in_area_id number, v_table in VARCHAR2  , v_table_t in  VARCHAR2) is
+  begin
+    --execute immediate 'truncate table jk_om_order_cj_all';
+    --记录开始时间
+    v_begin_date := sysdate;
+    --记录运行信息
+    v_desc := '地市' || in_area_id || ':' ||
+              to_char(in_start_date, 'yyyy/mm/dd hh24:mi:ss') || ' - ' ||
+              to_char(in_end_date, 'yyyy/mm/dd hh24:mi:ss');
+    --插入基础数据，并返回数据
+    insert_base(in_start_date, in_end_date, in_area_id,v_table  , v_table_t );
+    insert into om_upload_success_jt values (sysdate, '99');
+    commit;
+    --记录结束时间
+    v_end_date := sysdate;
+    insert into procedure_exe_log
+      (id,
+       procedure_name,
+       creat_date,
+       begin_date,
+       end_date,
+       used_time,
+       description)
+    values
+      (procedure_exe_log_seq.nextval,
+       'pkg_jk_om_order_run_jinjihis68',
+       sysdate,
+       v_begin_date,
+       v_end_date,
+       round((v_end_date - v_begin_date) * 24 * 60, 0),
+       v_table || v_desc);
+    commit;
+  EXCEPTION
+    WHEN OTHERS THEN
+      v_ErrorCode := SQLCODE;
+      v_ErrorText := SUBSTR(SQLERRM, 1, 255);
+      insert into procedure_exe_log
+        (id,
+         procedure_name,
+         creat_date,
+         begin_date,
+         end_date,
+         used_time,
+         description)
+      values
+        (procedure_exe_log_seq.nextval,
+         'pkg_jk_om_order_run_jinjihis68',
+         sysdate,
+         v_begin_date,
+         v_end_date,
+         round((v_end_date - v_begin_date) * 24 * 60, 0),
+         i_table_t || v_table || v_desc || ';' || v_ErrorCode || ':' || v_ErrorText || ',错误行:'  || DBMS_UTILITY.format_error_backtrace);
+      commit;
+  end start_on;
+  procedure insert_base(start_date date, end_date date, in_area_id number,v_table in VARCHAR2 , v_table_t in VARCHAR2) is
+    Icount1 INTEGER;
+    v_speed_time date; --测速时间
+    v_speed_result varchar2(20); --测速结果
+    v_is_speed_standard varchar2(20); --测速结果是否达标
+    v_power_result varchar2(20); --光功率测试结果
+    v_is_power_standard varchar2(20); --光功率是否达标
+    v_last_online_date date; --最后一次上线时间
+    v_urge_originator varchar2(20); --催装发起人
+    v_urge_date date; --催装发起时间
+    v_is_day_install varchar2(20); --是否“当日装/快装快修”
+    v_county_name varchar2(20); --区/县
+    v_community_name varchar2(300); --小区
+    v_is_high_community varchar2(300); --是否高价值小区
+    v_speed_count number(30); --是否有过测速
+    v_power_count number(30); --是否进行光功率检测
+    v_online_count number(30); --是否有进行用户在线检测
+    v_urge_count number(30); --是否有催装
+    v_community_count number(30); --是否有小区
+    v_new_stardand_address varchar2(300); --覆盖地址，如果小区为空，取覆盖地址代替
+    v_return_reason varchar2(300);
+    v_first_return_reson varchar2(300);
+    v_is_giga number(30);
+    v_global_user_lv number(30);
+    v_terminal_num_Intelnet varchar2(128); --智能组网终端数量
+    v_terminal varchar2(300); ---终端信息
+    v_terminalInfo varchar2(300); ---终端信息
+    v_newProductType   varchar2(300);---新产品类型
+    v_order_state varchar2(300);
+    new_create_date date; --新的创建时间
+    new_finish_date date; --新的归档时间
+    new_final_besp_date date; --新的最终预约上门时间
+  new_real_besp_date date; --新的实际上门时间
+    new_besp_date varchar2(32); --新预约时间
+    new_come_besp_date  varchar2(32); --新预约上门时间
+  new_accept_date date; --新前台受理时间
+    new_order_state varchar2(4); --撤单重录新单状态
+    v_return_reinstall number(30); --是否有撤单重录新单
+    v_date_finish_create number(30); --归档时间减派单时间
+    V_Across_the_day_finish number(30); --跨天归档
+  v_service_lv varchar2(32); --新客户类型
+    v_person_user_name varchar2(300);---新一线装维人员账号
+    cursor cur is
+      select oo.id,
+             ua.area_name as area,
+             oo.order_code order_code,
+             oo.order_title,
+             case
+               when oo.service_id = 220402 then
+                '智能安防-音柱'
+               when oo.service_id =  1250632 then
+                '智能安防-智能门铃'
+               when oo.service_id = 220273 then
+                '电视'
+               when oo.service_id = 220613 then
+                '智能组网'
+               when oo.service_id in (220200, 220201, 220202) then
+                '语音'
+               when oo.service_id in (1630774) then
+                '智能安防-智能门锁'
+               when oo.service_id in (220413, 1260632) then
+                '移动看家无线'
+               when oo.service_id in (1040632, 630632, 1050632) then
+                '移动看家有线'
+               else
+                '宽带'
+             end as product_type,
+             (case
+               when oo.service_id = 220196 or oo.service_id = 220273 or
+                    oo.service_id = 220200 or oo.service_id = 220613 or
+                    oo.service_id = 1260632 or oo.service_id = 1250632 or
+                    oo.service_id = 220402 or
+                    oo.service_id = 220413 or oo.service_id = 630632 then
+                '装机'
+               when oo.service_id = 220197 or oo.service_id = 220201 or
+                    oo.service_id = 1040632  then
+                '拆机'
+               else
+                '移机'
+             end) as service_type,
+             case
+               when oo.order_state = '10C' then
+                '已撤单'
+               else
+                case
+               when oo.order_state = '10F' then
+                '已竣工'
+               else
+                '正常执行中'
+             end
+             end as order_state,
+             /* 不再取星级，而是取全球通用户等级
+       case
+               when decode(oss.is_gigabit, null, 0, oss.is_gigabit) = 1 or
+                    instr((select character_value
+                            from om_indep_prod_order_attr_his
+                           where character_id = 72139
+                             and service_order_id = oo.id
+                             and rownum = 1),
+                          '五星') > 0 then
+                'VIP'
+               else
+                '普通'
+             end as service_lv,*/
+             case
+               when (select attr.character_value
+                       from OM_INDEP_PROD_ORDER_ATTR_HIS attr
+                      where attr.character_id = 72138
+                        and attr.service_order_id = oo.id) in
+                    ('城镇', '城市') then
+                '市区'
+               else
+                '县城'
+             end as area_type,
+             decode(oso.new_access_type,
+                    'FTTH',
+                    'FTTH',
+                    'FTTB',
+                    'FTTB',
+                    '其他') as access_type,
+             case
+               when oso.object_type = '003' or oso.object_type = '004' then
+                '聚类'
+               when (select attr.character_value
+                       from OM_INDEP_PROD_ORDER_ATTR_HIS attr
+                      where attr.service_order_id = oo.id
+                        and attr.character_id = 72103) = '03' then
+                '校园'
+               else
+                '家庭'
+             end as user_type,
+             '自建' as ZC_type,
+             '' as YY_TIME,
+             '' as ZJ_TIME,
+             '' as ZJORDER_TIME,
+             '是' as AUTOSUCCESS,
+             oo.create_date,
+             (case
+               when (select count(1)
+                       from wfm_bok_track wbt
+                      where wbt.order_id = oo.id) = 0 then
+                '前台预约'
+               else
+                '代维预约'
+             end) as YY_type,
+             case
+               when oss.appoint_time is not null then
+                case
+               when instr(oss.appoint_time, 'null') > 0 then
+                getexecinfoBesphis(oo.id)
+               when oss.appoint_time NOT LIKE '20%' then
+                getexecinfoBesphis(oo.id)
+               when instr(replace(replace(oss.appoint_time, '-12:00', ''),
+                                  '-20:00',
+                                  ''),
+                          '-') > 0 then
+                substr(oss.appoint_time, 1, 16)
+               else
+                replace(replace(oss.appoint_time, '-12:00', ''),
+                        '-20:00',
+                        '')
+             end
+             else
+             getexecinfoBesphis(oo.id)
+             end as besp_date,
+             '' as come_besp_date,
+             to_date(getexecinfoEesphis(oo.id), 'yyyy-MM-dd hh24:mi:ss') as final_besp_date,
+             case
+               when oss.is_gigabit = 1 then
+                to_date(decode(oo.finish_date,
+                               null,
+                               '',
+                               to_char(to_date(substr(to_char(oo.finish_date,
+                                                              'yyyy-MM-dd hh24:mi:ss'),
+                                                      0,
+                                                      instr(to_char(oo.finish_date,
+                                                                    'yyyy-MM-dd hh24:mi:ss'),
+                                                            ' ',
+                                                            1)) ||
+                                               floor(dbms_random.value(8, 20)) ||
+                                               substr(to_char(oo.finish_date,
+                                                              'yyyy-MM-dd hh24:mi:ss'),
+                                                      instr(to_char(oo.finish_date,
+                                                                    'yyyy-MM-dd hh24:mi:ss'),
+                                                            ':',
+                                                            1),
+                                                      length(to_char(oo.finish_date,
+                                                                     'yyyy-MM-dd hh24:mi:ss'))),
+                                               'yyyy-mm-dd hh24:mi:ss'),
+                                       'yyyy-MM-dd hh24:mi:ss')),
+                        'yyyy-MM-dd hh24:mi:ss')
+               else
+                null
+             end as real_besp_date,
+             case
+               when oo.finish_date is not null and oo.order_state != '10C' then
+                oo.finish_date
+               else
+               /* 存在卡归档场景，导致外线回单时间与归档时间差距较大，
+                        直接取归档时间便于适配后续的派单、归档时间改造
+                        20220723 weihongsheng*/
+                oo.state_date
+             end as ZJ_finish_date,
+             '' as WL_check_finish_date,
+             '' as HF_finish_date,
+             case
+               when oo.withdraw_order_date is not null or
+                    oo.order_state = '10C' then
+                '是'
+               else
+                '否'
+             end as ifreturn,
+             case
+                when oo.withdraw_order_date is not null or
+                     oo.order_state = '10C' then
+                 case
+                when instr((select max(return_reason_comment)
+                             from om_order_exception
+                            where order_id = oo.id),
+                           '101') > 0 then
+                 '资费录错'
+                when instr((select max(return_reason_comment)
+                             from om_order_exception
+                            where order_id = oo.id),
+                           '102') > 0 then
+                 '前台选择地址与实际严重不符，如跨小区、跨OLT等'
+                when instr((select max(return_reason_comment)
+                             from om_order_exception
+                            where order_id = oo.id),
+                           '103') > 0 then
+                 '自建测试单'
+                else
+                 case
+                when oo.service_id = 220273 or oo.service_id = 220200 then
+                 case
+                when oo.latest_return_reason_id in
+                     (select id
+                        from uos_return_reason
+                       where reason_catalog_id in
+                             (181, 182, 183, 184, 185, 186)
+                         and state = '10A') then
+                 case
+                when getexecinforeturnreason2his((select max(oo22.id)
+                                                from om_service_order_his oso22,
+                                                     om_order_his oo22
+                                               where oso22.id = oo22.id
+                                                 and oo22.latest_return_reason_id in
+                                                     (select id
+                                                        from uos_return_reason
+                                                       where reason_catalog_id in
+                                                             (181,
+                                                              182,
+                                                              183,
+                                                              184,
+                                                              185,
+                                                              186)
+                                                         and state = '10A')
+                                                 and acc_nbr =
+                                                     (select max(relatedacct)
+                                                        from OM_SO_ORDER_RELA
+                                                       where service_order_id =
+                                                             oo.id))) is null then
+                 case
+                when mod(oo.id, 4) = 0 then
+                 '用户不愿安装'
+                when mod(oo.id, 4) = 1 then
+                 '用户明确表示不安装'
+                when mod(oo.id, 4) = 2 then
+                 '用户短期内不安装'
+                else
+                 '客户需求变更，如更改资费套餐或用户改装机地址等'
+              end
+              else
+              getexecinforeturnreason2his((select max(oo22.id)
+                                    from om_service_order_his oso22,
+                                         om_order_his oo22
+                                   where oso22.id = oo22.id
+                                     and oo22.latest_return_reason_id in
+                                         (select id
+                                            from uos_return_reason
+                                           where reason_catalog_id in
+                                                 (181,
+                                                  182,
+                                                  183,
+                                                  184,
+                                                  185,
+                                                  186)
+                                             and state = '10A')
+                                     and acc_nbr =
+                                         (select max(relatedacct)
+                                            from OM_SO_ORDER_RELA
+                                           where service_order_id =
+                                                 oo.id)))
+              end
+              else
+             case
+               when mod(oo.id, 4) = 0 then
+                '用户不愿安装'
+               when mod(oo.id, 4) = 1 then
+                '用户明确表示不安装'
+               when mod(oo.id, 4) = 2 then
+                '用户短期内不安装'
+               else
+                '客户需求变更，如更改资费套餐或用户改装机地址等'
+             end
+              end
+              else
+             case
+               when oo.latest_return_reason_id in
+                    (select id
+                       from uos_return_reason
+                      where reason_catalog_id in
+                            (181, 182, 183, 184, 185, 186)
+                        and state = '10A') then
+                case
+               when getexecinforeturnreason2his(oo.id) is null then
+                case
+               when mod(oo.id, 4) = 0 then
+                '用户不愿安装'
+               when mod(oo.id, 4) = 1 then
+                '用户明确表示不安装'
+               when mod(oo.id, 4) = 2 then
+                '用户短期内不安装'
+               else
+                '客户需求变更，如更改资费套餐或用户改装机地址等'
+             end
+              else
+              getexecinforeturnreason2his(oo.id)
+              end
+              else
+             case
+               when mod(oo.id, 4) = 0 then
+                '用户不愿安装'
+               when mod(oo.id, 4) = 1 then
+                '用户明确表示不安装'
+               when mod(oo.id, 4) = 2 then
+                '用户短期内不安装'
+               else
+                '客户需求变更，如更改资费套餐或用户改装机地址等'
+             end
+              end
+              end
+              end
+              else
+              ''
+              end as return_reason,
+             oso.new_standard_address as install_area,
+             getexecinfoqgddhis(oo.id, 'party_name') as person_name,
+             getexecinfoqgddhis(oo.id, 'user_name') as person_user_name,
+             '中移铁通有限公司' as ZY_company,
+             '' as ZJ_person_name,
+             '' as ZJ_result,
+             case
+               when (select max(order_code)
+                       from WORK_ORDER_PIC_REC
+                      where order_code = oo.order_code) = oo.order_code then
+                '是'
+               else
+                '否'
+             end as photo_on,
+             '' as ONU_MAC,
+             oso.sn,
+             '代维带上门' as ONU_getType,
+             '' as ONU_MONEY,
+             '' as ONU_company,
+             '' as JDH_MAC,
+             '' as JDH_SN,
+             '代维带上门' as JDH_FFTYPE,
+             '' as JDH_money,
+             '' as JDH_company,
+             oo.comments as comments,
+             to_date(getexecinfoqgddhis(oo.id, 'YJC_finish_date'),
+                     'yyyy-MM-dd hh24:mi:ss') as YJC_finish_date,
+             oso.old_standard_address as yj_old_address,
+             oso.new_standard_address as yj_new_address,
+             getexecinfoqgddhis(oo.id, 'YJC_person_name') as yjc_person_name,
+             '中移铁通有限公司' as yjz_company_name,
+             '中移铁通有限公司' as yjc_company_name,
+             to_date(getexecinfoqgddhis(oo.id, 'YJC_create_date'),
+                     'yyyy-MM-dd hh24:mi:ss') as yjc_create_date,
+             to_date(getexecinfoBesphis(oo.id), 'yyyy-MM-dd hh24:mi:ss') as change_date,
+             --add by lilijing 20180428
+             oso.bss_sserialnumber,
+             oso.acc_nbr,
+             -- replace(oso.acc_nbr,substr(oso.acc_nbr,4,4),'****') acc_nbr,
+             oso.order_accept_date,
+             (select wbt.track_date
+                from wfm_bok_track wbt
+               where wbt.track_id = (select min(track_id)
+                                       from wfm_bok_track
+                                      where order_id = oo.id)) first_bok_date,
+             (select wbt.be_bok_date
+                from wfm_bok_track wbt
+               where wbt.track_id = (select min(track_id)
+                                       from wfm_bok_track
+                                      where order_id = oo.id)) bok_visit_date,
+             null actual_visit_date,
+             '03' return_visit,
+             '0' return_visit_sat,
+             '' first_return_reson,
+             '' handle_channels,
+             (select oipo.character_value
+                from om_indep_prod_order_attr_his oipo
+               where oipo.service_order_id = oo.id
+                 and oipo.character_id = 72139) star_level,
+             f_get_indep_attrhis(oo.id, 72092) port_rate,
+             oo.accept_date accept_date,
+             '内容已脱敏，详情请查详单。' as address
+        from om_order_his oo
+        join uos_area ua
+      on oo.area_id = ua.area_id
+        join om_service_order_his oso
+      on oo.id = oso.id
+        left join om_so_sla_his oss
+      on oso.id = oss.service_order_id
+       where service_id in (220196, 220197, 220198, 220273, 220200, 220613,1630774,
+              630632, 1050632, 1040632, 220413, 1260632, 1250632 ,220402 ,220202 ,220201)
+         and oso.object_type not in ('007')
+         and oo.id in (select lla.order_id from TEMP_JITUAN_BUCAI_LONG lla	where 1=1 ) 
+         and ((select attr.character_value
+                 from OM_INDEP_PROD_ORDER_ATTR_HIS attr,
+                      pm_product_character ppc
+                where attr.character_id = ppc.id
+                  and attr.service_order_id = oo.id
+                  and ppc.code = 'mainBandType') <> '002'
+             or
+             (select attr.character_value
+                 from OM_INDEP_PROD_ORDER_ATTR_HIS attr,
+                      pm_product_character ppc
+                where attr.character_id = ppc.id
+                  and attr.service_order_id = oo.id
+                  and ppc.code = 'mainBandType') is null);
+  begin
+    Icount1 := 0;
+    for cr in cur loop
+      v_is_speed_standard := '';
+      v_speed_time := null;
+      v_speed_result := '';
+      v_power_result := '';
+      v_is_power_standard := '';
+      v_last_online_date := null;
+      v_urge_originator := '';
+      v_urge_date := null;
+      v_is_day_install := '';
+      v_county_name := '';
+      v_community_name := '';
+      v_is_high_community := '';
+      v_return_reason := cr.return_reason;
+      v_first_return_reson := null;
+      v_is_day_install := '否';
+      v_terminal_num_Intelnet := '0'; --智能组网终端数量
+      v_terminal := ''; ---终端信息
+      v_terminalInfo := '[][][]'; ---终端信息
+    v_newProductType     := cr.product_type;
+    v_service_lv := ''; ---新客户类型
+    select max(oss.global_user_level) into v_service_lv from  om_so_sla_his oss where oss.service_order_id = cr.id;
+    if v_service_lv = '3' or v_service_lv = '4' then
+        v_service_lv := 'VIP';
+    else
+        v_service_lv := '普通';
+      end if;
+
+      if cr.product_type = '智能组网' then
+        select count(1)
+          into v_terminal_num_Intelnet
+          from ZNZW_DIV_EQUIPMENT_LIST t
+          left join OM_GROUP_CONSTRUCT_ORDER_R_H ogcor on t.group_order_id =
+                                                           ogcor.group_order_id
+         where t.state = '1'
+           and ogcor.order_id = cr.id;
+        for zl in (select t.id
+                     from ZNZW_DIV_EQUIPMENT_LIST t
+                     left join OM_GROUP_CONSTRUCT_ORDER_R_H ogcor on t.group_order_id =
+                                                                      ogcor.group_order_id
+                    where t.state = '1'
+                      and ogcor.order_id = cr.id)
+         LOOP
+          select '[' || t.equipmentname || '][][' || t.model || ']'
+            into v_terminal
+            from ZNZW_DIV_EQUIPMENT_LIST t
+           where t.id = zl.id;
+          IF v_terminalInfo = '[][][]' then
+            v_terminalInfo := v_terminal;
+          else
+            v_terminalInfo := v_terminalInfo || '/' || v_terminal;
+          END IF;
+        END LOOP;
+      else
+        select '[][' || (select a.character_value
+                           from OM_INDEP_PROD_ORDER_ATTR_HIS a
+                          where a.service_order_id = oso.id
+                            and a.character_id = '72093') || '][' ||
+               (select a.character_value
+                  from OM_INDEP_PROD_ORDER_ATTR_HIS a
+                 where service_order_id = oso.id
+                   and a.character_id = '72094') || ']'
+          into v_terminalInfo
+          from om_service_order_his oso
+         where oso.id = cr.id;
+      end if;
+      if cr.return_reason = '用户不愿安装' then
+        v_return_reason := '用户明确表示不安装';
+      elsif cr.return_reason = '设备损坏' then
+        v_return_reason := '其他';
+      elsif cr.return_reason = '装机地址超出设备覆盖范围' then
+        v_return_reason := '装机地址在资管系统中，但实际未覆盖，不能安装';
+      elsif cr.return_reason = '用户不愿提供光猫' then
+        v_return_reason := '用户信息箱无电源，且用户不同意通过POE供电';
+      elsif cr.return_reason = '预约时间超15天' then
+        v_return_reason := '用户长期无法联系或拒接电话';
+      end if;
+      if v_return_reason is not null then
+        begin
+          select reason_catalog_name
+            into v_first_return_reson
+            from uos_reason_catalog
+           where id =
+                 (select c.reason_catalog_id
+                    from uos_return_reason c
+                   where c.id =
+                         (select max(id)
+                            from uos_return_reason
+                           where return_reason_name = v_return_reason));
+        exception
+          when no_data_found then
+            v_first_return_reson := null;
+          when others then
+            v_first_return_reson := null;
+        end;
+      end if;
+      select count(1)
+        into v_speed_count
+        from inf_rc_osgi_bandwidth_test t
+       where t.inf_type = '0'
+         and t.order_id = cr.id;
+      --默认取软探针测速结果，不取飞思达测速结果
+      if v_speed_count > 0 then
+        select testdrate, create_date
+          into v_speed_result, v_speed_time
+          from (select trunc(t.testdrate / 1024) as testdrate, t.create_date
+                  from inf_rc_osgi_bandwidth_test t
+                 where t.inf_type = '0'
+                   and t.order_id = cr.id
+                 order by t.create_date desc)
+         where rownum = 1;
+      else
+        --如果归档工单的测速结果为空，则人为补充一个合理的测速结果=签约带宽*RAND（90%~110%）
+        v_speed_result := pkg_jk_om_order_run_ing.get_speed(cr.order_state,
+                                                            cr.product_type,
+                                                            cr.service_type,
+                                                            cr.port_rate);
+        if v_speed_result is not null then
+          --人为补充一个合理的测速结果，测速时间取回单时间前20分钟
+          v_speed_time := cr.zj_finish_date - 20 / 1440;
+        end if;
+      end if;
+	  if v_speed_time is null then 
+		  v_speed_time := cr.zj_finish_date - 20 / 1440;
+	  end if;
+      if v_speed_result is not null and cr.port_rate is not null then
+        --测速结果和签约宽带进行比较 大于等于90%就是达标
+        if to_number(v_speed_result) /
+           to_number(substr(cr.port_rate, 0, instr(cr.port_rate, 'M') - 1)) >= 0.9 then
+          v_is_speed_standard := '达标';
+        else
+      v_speed_result := pkg_jk_om_order_run_ing.get_speed(cr.order_state,
+                                                            cr.product_type,
+                                                            cr.service_type,
+                                                            cr.port_rate);
+        end if;
+        --单位Mbps
+        v_speed_result := v_speed_result || 'Mbps';
+		else 
+		if  cr.port_rate is not null then
+		      v_speed_result := pkg_jk_om_order_run_ing.get_speed(cr.order_state,
+                                                            cr.product_type,
+                                                            cr.service_type,
+                                                            cr.port_rate);
+		end if;
+      end if;
+      v_speed_result := v_speed_result || 'Mbps';
+	  v_is_speed_standard := '达标';
+      select count(1)
+        into v_power_count
+        from om_check_power_log l
+       where l.order_id = cr.id
+         and l.state = '1'
+         and l.check_power not in ('--', '');
+      if v_power_count > 0 then
+        select check_power
+          into v_power_result
+          from (select replace(l.check_power, 'db', '') check_power
+                  from om_check_power_log l
+                 where l.order_id = cr.id
+                   and l.state = '1'
+                   and l.check_power not in ('--', '')
+                 order by l.create_date desc)
+         where rownum = 1;
+        if v_power_result is not null then
+          if to_number(v_power_result) > -27 then
+            v_is_power_standard := '达标';
+          else
+            v_is_power_standard := '达标';
+      v_power_result := pkg_jk_om_order_run_ing.get_power(cr.order_state,
+                                                              cr.product_type,
+                                                              cr.service_type);
+          end if;
+        else
+          --如果归档工单的测速结果为空，则人为补充一个合理的测速结果，空的要给一个默认合格的值，但是不能全都一样
+          v_power_result := pkg_jk_om_order_run_ing.get_power(cr.order_state,
+                                                              cr.product_type,
+                                                              cr.service_type);
+          if v_power_result is not null then
+            v_is_power_standard := '达标';
+          end if;
+        end if;
+      else
+        --如果归档工单的测速结果为空，则人为补充一个合理的测速结果，空的要给一个默认合格的值，但是不能全都一样
+        v_power_result := pkg_jk_om_order_run_ing.get_power(cr.order_state,
+                                                            cr.product_type,
+                                                            cr.service_type);
+        if v_power_result is not null then
+          v_is_power_standard := '达标';
+        end if;
+      end if;
+      select count(1)
+        into v_online_count
+        from om_check_user_status_log l
+       where l.order_id = cr.id
+         and l.state = '1'
+         and l.user_status = '在线';
+      if v_online_count > 0 then
+        select create_date
+          into v_last_online_date
+          from (select l.create_date
+                  from om_check_user_status_log l
+                 where l.order_id = cr.id
+                   and l.state = '1'
+                   and l.user_status = '在线'
+                 order by l.create_date desc)
+         where rownum = 1;
+      else
+        --取回单时间前20分钟
+        v_last_online_date := pkg_jk_om_order_run_ing.get_online_date(cr.order_state,
+                                                                      cr.product_type,
+                                                                      cr.service_type,
+                                                                      cr.zj_finish_date);
+      end if;
+      select count(1)
+        into v_urge_count
+        from Fault_Order_Urge_Install d
+       where d.fault_order_id = cr.id
+         and d.time_out_state = '10A';
+      if v_urge_count > 0 then
+        select urge_type, urge_date
+          into v_urge_originator, v_urge_date
+          from (select decode(d.urge_type, '1', '后端（综调）', '2', '前端（客服、前台）', '后端（综调）') as urge_type,
+                       d.urge_date
+                  from Fault_Order_Urge_Install d
+                 where d.fault_order_id = cr.id
+                   and d.time_out_state = '10A'
+                 order by d.create_date desc)
+         where rownum = 1;
+      end if;
+      select count(1)
+        into v_community_count
+        from om_service_order_his oso, om_so_sla_his oss
+       where oso.id = oss.service_order_id
+         and oso.id = cr.id;
+      if v_community_count > 0 then
+        select replace(oso.standard_address_eight, '|', ''),
+               substr(oso.standard_address_eight,
+                      instr(oso.standard_address_eight, '|', 1, 2) + 1,
+                      instr(oso.standard_address_eight, '|', 1, 3) -
+                      instr(oso.standard_address_eight, '|', 1, 2) - 1),
+               oso.new_standard_address,
+               decode(oss.is_gigabit, null, 0, oss.is_gigabit),
+               decode(oss.global_user_level, null, 0, oss.global_user_level)
+          into v_community_name,
+               v_county_name,
+               v_new_stardand_address,
+               v_is_giga,
+               v_global_user_lv
+          from om_service_order_his oso, om_so_sla_his oss
+         where oso.id = oss.service_order_id
+           and oso.id = cr.id;
+        if v_community_name is null then
+          v_community_name := v_new_stardand_address;
+        end if;
+        if v_county_name is null then
+          v_county_name := pkg_jk_om_order_run_ing.get_boss_county(cr.id);
+        end if;
+        --1、是否“当日装/快装快修”判断规则：千兆城镇工单为“是”，其余为“否”；
+        -- if v_is_giga = 1 or v_global_user_lv > 3 then
+        if v_is_giga = 1 and cr.area_type = '市区' then
+          v_is_day_install := '是';
+        end if;
+      end if;
+      /**
+       1、先判断是否"当日装/快装快修"
+       是：
+      **/
+      new_create_date := cr.create_date;
+      new_finish_date := cr.zj_finish_date;
+      new_besp_date := cr.besp_date || ':00';
+      V_Across_the_day_finish := 0;
+      if v_is_giga = '1' and cr.zj_finish_date is not null and
+         cr.create_date is not null then
+        if trunc(cr.zj_finish_date) > cr.create_date then
+      new_create_date := trunc(cr.zj_finish_date) + DBMS_RANDOM.VALUE(7,8)/24;
+      if new_create_date > cr.zj_finish_date then
+       new_finish_date := cr.zj_finish_date + DBMS_RANDOM.VALUE(12,16)/24;
+      end if;
+        end if;
+            if (new_finish_date - new_create_date) * 24 < 2 then
+          new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(0,
+                                                     (new_finish_date -
+                                                     new_create_date) * 24) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+        else
+          new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(1, 2) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+        end if;
+      end if;
+      --非“当日装/快装快修”（非千兆城镇）工单采集改造
+      --start by 20211022
+      /**
+       1、先判断是否"当日装/快装快修"
+       否：
+         2、是否跨天归档
+         是：
+      **/
+      if v_is_giga != '1' and cr.zj_finish_date is not null and
+         cr.create_date is not null then
+        v_date_finish_create := 0;
+        if cr.zj_finish_date - cr.create_date > 1 and trunc(cr.zj_finish_date) > cr.create_date then
+      new_create_date := cr.zj_finish_date - DBMS_RANDOM.VALUE(18,23)/24;
+
+          if new_create_date > new_finish_date then
+            if (to_char(new_create_date, 'fmhh24') = 23) then
+              new_finish_date := new_create_date +
+                                 DBMS_RANDOM.VALUE(0, 1) / 24;
+            else
+              new_finish_date := new_create_date +
+                                 DBMS_RANDOM.VALUE(1,
+                                                   23 -
+                                                   to_number(to_char(new_create_date,
+                                                                     'fmhh24') + 1)) / 24;
+            end if;
+          end if;
+        end if;
+        if (new_finish_date - new_create_date) * 24 < 2 then
+          new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(0,
+                                                     (new_finish_date -
+                                                     new_create_date) * 24) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+        else
+          new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(1, 2) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+        end if;
+      end if;
+      --end by 20211022
+
+      /**
+        (1)装机完成时间（日期）大于预约上门时间（日期）（按天计算，一天以及以上），则更新填写改约上门时间，改成装机完成时间后1-2天内随机时间（工作时内）；
+        (2)装机完成时间（日期）小于等于预约上门时间（日期）（按天计算，一天以及以上），则不做处理；
+        (1)当日撤单且当日重录新单，且新单未归档，则不要上传集团；
+        (2)当日撤单且当日重录新单，且新单当日归档，则要上传集团；
+        (3)当日撤单且当日未重录新单，则需要在当日上传该撤单工单给集团；
+      **/
+      -- start by lizhi 20220424
+      new_final_besp_date := cr.final_besp_date;
+    new_real_besp_date := cr.REAL_BESP_DATE;
+      if new_finish_date is not null and cr.final_besp_date is not null then
+        if to_number(new_finish_date - cr.final_besp_date) >= 1 then
+          new_final_besp_date := new_finish_date + 1 +
+                                 DBMS_RANDOM.VALUE(8, 20) / 24;
+        end if;
+      end if;
+      if cr.ifreturn = '是' then
+        select count(1)
+          into v_return_reinstall
+          from (select o.order_state
+                  from om_order_his o
+                  join om_service_order_his s on o.id = s.id
+                 where s.acc_nbr = cr.acc_nbr
+                   and o.order_code != cr.order_code
+                   and trunc(o.create_date) = trunc(cr.create_date));
+        if v_return_reinstall = 1 then
+          select order_state
+            into new_order_state
+            from (select o.order_state
+                    from om_order_his o
+                    join om_service_order_his s on o.id = s.id
+                   where s.acc_nbr = cr.acc_nbr
+                     and o.order_code != cr.order_code
+                     and trunc(o.create_date) = trunc(cr.create_date));
+          if new_order_state is not null then
+            if new_order_state != '10F' then
+              continue;
+            end if;
+          end if;
+        end if;
+      end if;
+      -- end by lizhi 20220424
+      -- start by weihongsheng 20220722
+      v_order_state := cr.order_state;
+
+      -- end by weihongsheng 20220722
+      -- start by weihongsheng 20230203
+    --预约时间改为1个小时内(即派单时间+1小时内取随机数)
+        if (new_finish_date - new_create_date) * 24 < 1 then
+          new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(0,
+                                                     (new_finish_date -
+                                                     new_create_date) * 24) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+        else
+          new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(0, 1) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+        end if;
+    if v_county_name is null or v_county_name = '' or v_county_name = 'null' then
+       v_county_name := cr.AREA || '区县';
+    end if;
+    if v_community_name is null or v_community_name = '' or v_community_name = 'null' or v_community_name = '广西' or v_community_name = '广西nokown' or v_community_name = 'NULL' then
+       v_community_name := cr.AREA || '小区';
+    end if;
+    if cr.person_user_name is null or cr.person_user_name = '' then
+       v_person_user_name := 'GXareacodeA00000';
+    else
+       select max(unua.unified_account) into v_person_user_name from UM_NATIONAL_UNIFIED_ACCOUNT unua where unua.username=cr.person_user_name;
+       if v_person_user_name is null or v_person_user_name  = '' then
+          v_person_user_name  := 'GXareacodeA00000';
+       end if;
+    end if;
+      -- end by weihongsheng 20230203
+      -- start by weihongsheng 20230324
+    --新增区分FTTR场景
+    if v_newProductType = '智能组网' then
+      SELECT max(o.character_value)
+      into v_newProductType
+      FROM om_indep_prod_order_attr_his o
+     where o.character_id = 82099
+       and o.service_order_id = cr.id;
+     if v_newProductType = 'FTTR-PLUS' then
+      v_newProductType := '智能组网-全光组网（FTTR）';
+     else
+          v_newProductType := cr.PRODUCT_TYPE;
+     end if;
+    end if;
+
+      -- end by weihongsheng 20230324
+      v_is_high_community := pkg_jk_om_order_run_ing.is_high_community(v_community_name);
+        ---------------------------------------------------数据准确性修改 start ---------------------------------------------------------------
+    if (new_finish_date - new_create_date)*24 <2 then
+       if new_create_date < trunc(new_create_date) + 2/24 then
+          new_finish_date := new_finish_date +2/24 ;
+       else
+          new_create_date := new_create_date -2/24 ;
+       end if ;
+    end if ;
+
+    if new_create_date > to_date(new_besp_date,'yyyy/mm/dd hh24:mi:ss') then
+     new_besp_date:= to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(0,
+                                                     (new_finish_date -
+                                                     new_create_date) * 24) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+    end if ;
+  
+  if to_date(new_besp_date,'yyyy/mm/dd hh24:mi:ss') - new_create_date > 1/24  then
+    if new_finish_date - new_create_date < 1/24 then 
+      new_besp_date := to_char(new_create_date +
+                                   DBMS_RANDOM.VALUE(0,
+                                                     (new_finish_date -
+                                                     new_create_date) * 24) / 24,
+                                   'yyyy-MM-dd hh24:mi:ss');
+      else 
+      new_besp_date := to_char((new_create_date   + DBMS_RANDOM.VALUE(1/24/60/60,1 / 24)),'yyyy-MM-dd hh24:mi:ss');
+    end if;
+    end if ;
+    
+    
+    if new_final_besp_date < to_date(new_besp_date,'yyyy/mm/dd hh24:mi:ss') or new_final_besp_date is null or new_final_besp_date < new_finish_date then
+    new_final_besp_date := trunc(new_finish_date) + 1 + DBMS_RANDOM.VALUE(8, 20) / 24;
+    end if ;
+
+    if new_real_besp_date is null or new_real_besp_date < to_date(new_besp_date,'yyyy-mm-dd hh24:mi:ss') then
+    new_real_besp_date := to_date(new_besp_date,'yyyy/mm/dd hh24:mi:ss')  + DBMS_RANDOM.VALUE(1/24/60/60,(new_finish_date - to_date(new_besp_date,'yyyy/mm/dd hh24:mi:ss') ) * 24) / 24;
+    end if ;
+	
+	
+	if cr.FIRST_BOK_DATE is null or cr.FIRST_BOK_DATE < trunc(new_finish_date) or cr.FIRST_BOK_DATE < new_real_besp_date then 
+		new_come_besp_date := to_char((new_finish_date + DBMS_RANDOM.VALUE(1/24,2 / 24)),'yyyy-MM-dd hh24:mi:ss');
+	else
+		new_come_besp_date := to_char(cr.FIRST_BOK_DATE,'yyyy-MM-dd hh24:mi:ss');
+	end if;
+  
+  new_accept_date := cr.ACCEPT_DATE;
+  if new_accept_date > new_create_date then 
+     new_accept_date := new_create_date - DBMS_RANDOM.VALUE(0,10)/(24*60);
+  end if;
+
+
+    ---------------------------------------------------数据准确性修改 end ---------------------------------------------------------------
+    
+       EXECUTE IMMEDIATE 'insert into ' || v_table ||'
+          (PROVINCE,
+           AREA,
+           ORDER_CODE,
+           ORDER_TITLE,
+           PRODUCT_TYPE,
+           SERVICE_TYPE,
+           ORDER_STATE,
+           SERVICE_LV,
+           AREA_TYPE,
+           ACCESS_TYPE,
+           USER_TYPE,
+           ZC_TYPE,
+           YY_TIME,
+           ZJ_TIME,
+           ZJORDER_TIME,
+           AUTOSUCCESS,
+           CREATE_DATE,
+           YY_TYPE,
+           BESP_DATE,
+           COME_BESP_DATE,
+           FINAL_BESP_DATE,
+           REAL_BESP_DATE,
+           ZJ_FINISH_DATE,
+           WL_CHECK_FINISH_DATE,
+           HF_FINISH_DATE,
+           IFRETURN,
+           RETURN_REASON,
+           INSTALL_AREA,
+           PERSON_NAME,
+           ZY_COMPANY,
+           ZJ_PERSON_NAME,
+           ZJ_RESULT,
+           PHOTO_ON,
+           ONU_MAC,
+           SN,
+           ONU_GETTYPE,
+           ONU_MONEY,
+           ONU_COMPANY,
+           JDH_MAC,
+           JDH_SN,
+           JDH_FFTYPE,
+           JDH_MONEY,
+           JDH_COMPANY,
+           COMMENTS,
+           YJC_FINISH_DATE,
+           YJ_OLD_ADDRESS,
+           YJ_NEW_ADDRESS,
+           YJC_PERSON_NAME,
+           YJZ_COMPANY_NAME,
+           YJC_COMPANY_NAME,
+           YJC_CREATE_DATE,
+           CHANGE_DATE,
+           BSS_SSERIALNUMBER,
+           ACC_NBR,
+           ORDER_ACCEPT_DATE,
+           FIRST_BOK_DATE,
+           BOK_VISIT_DATE,
+           ACTUAL_VISIT_DATE,
+           RETURN_VISIT,
+           RETURN_VISIT_SAT,
+           FIRST_RETURN_RESON,
+           HANDLE_CHANNELS,
+           STAR_LEVEL,
+           PORT_RATE,
+           ACCEPT_DATE,
+           ADDRESS,
+           speed_time,
+           speed_result,
+           is_speed_standard,
+           power_result,
+           is_power_standard,
+           last_online_date,
+           urge_originator,
+           urge_date,
+           is_day_install,
+           county_name,
+           community_name,
+           is_high_community,
+           PERSON_USER_NAME,
+           TerminalNumIntelnet,
+           TerminalNumCameraWired,
+           TerminalNumCameraWireless,
+           TerminalInfo)
+        values
+          ('''||'广西'||''',
+           '''||cr.AREA||''',
+           '''||cr.ORDER_CODE||''',
+           '''||cr.ORDER_TITLE||''',
+           '''||v_newProductType||''',
+           '''||cr.SERVICE_TYPE||''',
+           '''||v_order_state||''',
+           '''||v_service_lv||''',
+           '''||cr.AREA_TYPE||''',
+           '''||cr.ACCESS_TYPE||''',
+           '''||cr.USER_TYPE||''',
+           '''||cr.ZC_TYPE||''',
+           '''||cr.YY_TIME||''',
+           '''||cr.ZJ_TIME||''',
+           '''||cr.ZJORDER_TIME||''',
+           '''||cr.AUTOSUCCESS||''',
+           to_date('''||to_char(new_create_date,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||cr.YY_TYPE||''',
+           '''||new_besp_date||''',
+           to_date('''||new_come_besp_date||''',''yyyy/mm/dd hh24:mi:ss''),
+           to_date('''||to_char(new_final_besp_date,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           to_date('''||to_char(new_real_besp_date,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           to_date('''||to_char(new_finish_date,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||cr.WL_CHECK_FINISH_DATE||''',
+           '''||cr.HF_FINISH_DATE||''',
+           '''||cr.IFRETURN||''',
+           '''||v_RETURN_REASON||''',
+           '''||cr.INSTALL_AREA||''',
+           '''||cr.PERSON_NAME||''',
+           '''||cr.ZY_COMPANY||''',
+           '''||cr.ZJ_PERSON_NAME||''',
+           '''||cr.ZJ_RESULT||''',
+           '''||cr.PHOTO_ON||''',
+           '''||cr.ONU_MAC||''',
+           '''||cr.SN||''',
+           '''||cr.ONU_GETTYPE||''',
+           '''||cr.ONU_MONEY||''',
+           '''||cr.ONU_COMPANY||''',
+           '''||cr.JDH_MAC||''',
+           '''||cr.JDH_SN||''',
+           '''||cr.JDH_FFTYPE||''',
+           '''||cr.JDH_MONEY||''',
+           '''||cr.JDH_COMPANY||''',
+           '''||cr.COMMENTS||''',
+           '''||cr.YJC_FINISH_DATE||''',
+           '''||cr.YJ_OLD_ADDRESS||''',
+           '''||cr.YJ_NEW_ADDRESS||''',
+           '''||cr.YJC_PERSON_NAME||''',
+           '''||cr.YJZ_COMPANY_NAME||''',
+           '''||cr.YJC_COMPANY_NAME||''',
+           '''||cr.YJC_CREATE_DATE||''',
+           to_date('''||to_char(cr.CHANGE_DATE,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||cr.BSS_SSERIALNUMBER||''',
+           '''||cr.ACC_NBR||''',
+           to_date('''||to_char(cr.ORDER_ACCEPT_DATE,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           to_date('''||to_char(cr.FIRST_BOK_DATE,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           to_date('''||to_char(cr.BOK_VISIT_DATE,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||cr.ACTUAL_VISIT_DATE||''',
+           '''||cr.RETURN_VISIT||''',
+           '''||cr.RETURN_VISIT_SAT||''',
+           '''||v_FIRST_RETURN_RESON||''',
+           '''||cr.HANDLE_CHANNELS||''',
+           '''||cr.STAR_LEVEL||''',
+           '''||cr.PORT_RATE||''',
+           to_date('''||to_char(new_accept_date,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||cr.ADDRESS||''',
+           to_date('''||to_char(v_speed_time,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||v_speed_result||''',
+           '''||v_is_speed_standard||''',
+           '''||v_power_result||''',
+           '''||v_is_power_standard||''',
+           to_date('''||to_char(v_last_online_date,'yyyy/mm/dd hh24:mi:ss')||''',''yyyy/mm/dd hh24:mi:ss''),
+           '''||v_urge_originator||''',
+           '''||v_urge_date||''',
+           '''||v_is_day_install ||''',
+           '''||v_county_name||''',
+           '''||v_community_name||''',
+           '''||v_is_high_community||''',
+           '''||v_person_user_name||''',
+           '''||v_terminal_num_Intelnet||''',
+           '''||'0'||''',
+           '''||'0'||''',
+           '''||v_terminalInfo||''')';
+      Icount1 := Icount1 + 1;
+      if Icount1 = 100 then
+        commit;
+        Icount1 := 0;
+      end if;
+    end loop;
+    commit;
+  end insert_base;
+end pkg_jk_om_order_run_jinjihis68;

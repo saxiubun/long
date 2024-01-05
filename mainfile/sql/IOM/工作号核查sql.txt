@@ -1,0 +1,13 @@
+-- 6.1
+select a.*,rowid from gx_oss.data_record_file a where a.order_id = '164665257';  -- 2899434016165479
+-- 6.2
+select * from gx_oss.inf_gzh_record_msg a where a.call_id = '2899434016165479';
+
+select * from om_gzh_bind_record a where a.tel_b ='18376265857';
+--gzhCallMsg是6.1  查工作号推我们的日志
+select * from gx_oss.inf_log_interface il where il.order_code='167697007499029673' and il.inf_type = 'gzhCallMsg' order by il.create_date desc;
+
+
+
+--因为对端录音文件下载时效只有五分钟.  五分钟后我们就下载不了. 有时候生产问题会有6.2接口文件下载失败情况.  
+select * from gx_oss.inf_gzh_record_msg a where 1=1 and a.create_date > sysdate - INTERVAL '5' MINUTE order by a.create_date desc;

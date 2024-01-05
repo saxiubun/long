@@ -1,0 +1,90 @@
+-------------------------------------------------------------合并历史表与在途表数据 开始---------------------------------------------------------------------------
+
+insert into 在途表名 select * from 历史表名 where 1=1 ;
+commit;
+
+-------------------------------------------------------------合并历史表与在途表数据 开始---------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------刷新数据各时间字段为当天 开始---------------------------------------------------------------------------
+
+--------------------  先创建美化表名 开始 ---------------------------------------
+create table  美化表名 as  select * from 在途表名 where 1=1 ;
+commit;
+--------------------  执行存过刷美化表数据 开始 ---------------------------------------
+
+
+
+declare
+  B_SEQ number(10);
+  --查询所有A表ID
+  cursor cur_A is
+    select *
+      from 美化表名 b
+     where 1 = 1
+       and b.zj_finish_date < to_date('2023-06-09', 'yyyy-mm-dd');
+begin
+  for a in cur_A loop
+    B_SEQ := 0;
+    select (to_date('2023-06-09', 'yyyy-mm-dd') - trunc(a.zj_finish_date))
+      into B_SEQ
+      from 美化表名 c
+     where c.order_code = a.order_code;
+    --  更新表数据
+    update 美化表名 c
+       set c.create_date          = c.create_date + B_SEQ,
+           c.besp_date            = to_char(to_date(c.besp_date,
+                                                    'yyyy-mm-dd hh24:mi:ss') +
+                                            B_SEQ,
+                                            'yyyy-mm-dd hh24:mi:ss'),
+           c.COME_BESP_DATE       = c.COME_BESP_DATE + B_SEQ,
+           c.FINAL_BESP_DATE      = c.FINAL_BESP_DATE + B_SEQ,
+           c.REAL_BESP_DATE       = c.REAL_BESP_DATE + B_SEQ,
+           c.ZJ_FINISH_DATE       = c.ZJ_FINISH_DATE + B_SEQ,
+           c.WL_CHECK_FINISH_DATE = c.WL_CHECK_FINISH_DATE + B_SEQ,
+           c.HF_FINISH_DATE       = c.HF_FINISH_DATE + B_SEQ,
+           c.YJC_FINISH_DATE      = c.YJC_FINISH_DATE + B_SEQ,
+           c.YJC_CREATE_DATE      = c.YJC_CREATE_DATE + B_SEQ,
+           c.CHANGE_DATE          = c.CHANGE_DATE + B_SEQ,
+           c.ORDER_ACCEPT_DATE    = c.ORDER_ACCEPT_DATE + B_SEQ,
+           c.FIRST_BOK_DATE       = c.FIRST_BOK_DATE + B_SEQ,
+           c.BOK_VISIT_DATE       = c.BOK_VISIT_DATE + B_SEQ,
+           c.ACTUAL_VISIT_DATE    = c.ACTUAL_VISIT_DATE + B_SEQ,
+           c.ACCEPT_DATE          = c.ACCEPT_DATE + B_SEQ,
+           c.SPEED_TIME           = c.SPEED_TIME + B_SEQ,
+           c.LAST_ONLINE_DATE     = c.LAST_ONLINE_DATE + B_SEQ,
+           c.URGE_DATE            = c.URGE_DATE + B_SEQ
+     where c.order_code = a.order_code;
+    commit;
+  
+  end loop;
+  -- commit;
+end;
+
+
+-------------------------------------------------------------刷新数据各时间字段为当天 结束---------------------------------------------------------------------------
+
+
+
+
+-------------------------------------------------------------存过逐条写入采集表 开始---------------------------------------------------------------------------
+declare
+  --查询所有A表ID
+  cursor cur_A is
+    select *
+      from 美化表名 b
+     where 1 = 1
+
+begin
+  for a in cur_A loop
+    --  更新表数据
+    insert into JK_OM_ORDER_CJ_ALL select * from 美化表名 c where c.order_code = a.order_code;
+    commit;
+  
+  end loop;
+  -- commit;
+end;
+
+
+-------------------------------------------------------------刷新数据各时间字段为当天 结束---------------------------------------------------------------------------

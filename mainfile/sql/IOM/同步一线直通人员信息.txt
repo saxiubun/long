@@ -1,0 +1,3 @@
+insert into ydzc_pro.uos_staff_iom 
+select * from ydzc.uos_staff_iom t where not exists (
+select * from ydzc_pro.uos_staff_iom us where us.staff_id=t.staff_id)

@@ -1,0 +1,459 @@
+select 
+round(100*d.old_gigabit_num/decode(d.gigabit_num,0,1,d.gigabit_num),2) as 旧口径千兆工单及时率,
+round(100*d.new_gigabit_num/decode(d.gigabit_num,0,1,d.gigabit_num),2) as 新口径千兆工单及时率,
+round(100*d.vip_city_num/decode(d.no_gigabit_vip_city,0,1,d.no_gigabit_vip_city),2) as 旧口径高品质城镇非千兆及时率,
+round(100*d.vip_county_num/decode(d.no_gigabit_vip_county,0,1,d.no_gigabit_vip_county),2) as 旧口径高品质农村非千兆及时率,
+round(100*d.normal_city_num/decode(d.no_gigabit_normal_city,0,1,d.no_gigabit_normal_city),2) as 旧口径普通城镇非千兆及时率,
+round(100*d.normal_county_num/decode(d.no_gigabit_normal_county,0,1,d.no_gigabit_normal_county),2) as 旧口径普通农村非千兆及时率,
+round(100*d.n_vip_city_num/decode(d.no_gigabit_vip_city,0,1,d.no_gigabit_vip_city),2) as 新口径高品质城镇非千兆及时率,
+round(100*d.n_vip_county_num/decode(d.no_gigabit_vip_county,0,1,d.no_gigabit_vip_county),2) as 新口径高品质农村非千兆及时率,
+round(100*d.n_normal_city_num/decode(d.no_gigabit_normal_city,0,1,d.no_gigabit_normal_city),2) as 新口径普通城镇非千兆及时率,
+round(100*d.n_normal_county_num/decode(d.no_gigabit_normal_county,0,1,d.no_gigabit_normal_county),2) as 新口径普通农村非千兆及时率,
+round(100*d.ontime_num/decode(d.sum_num,0,1,d.sum_num),2) as 履约率,
+round(100*d.real_call_num/decode(d.sum_num,0,1,d.sum_num),2) as 首响及时率,
+round(100*d.spd_true_data/decode(d.spd_data,0,1,d.spd_data),2) as 测速达标率,
+round(100*d.power_true_data/decode(d.power_data,0,1,d.power_data),2) as 光功率达标率,
+round(100*d.right_data/decode(d.sum_num,0,1,d.sum_num),2) as 数据准确率,
+d.jtkd_zyc_num as 家宽装移拆工单量,
+e.jtkd_zyc_no_num as 家宽装移拆未采集工单量,
+d.mbh_z_num as 魔百和装机工单量,
+e.mbh_z_no_num as 魔百和装机未采集工单量,
+d.znzw_z_num as 智能组网装机工单量,
+e.znzw_z_no_num as 智能组网装机未采集工单量,
+d.paxc_zyc_num as 平安乡村装移拆工单量,
+e.paxc_zyc_no_num as 平安乡村装移拆未采集工单量,
+d.hm_z_num as 和目装机工单量,
+e.hm_z_no_num as 和目装机未采集工单量,
+d.znml_z_num as 智能门铃装机工单量,
+e.znml_z_no_num as 智能门铃装机未采集工单量,
+d.ytj_z_num as 云台机装机工单量,
+e.ytj_z_no_num as 云台机装机未采集工单量,
+d.znlb_z_num as 智能喇叭装机工单量,
+e.znlb_z_no_num as 智能喇叭装机未采集工单量,
+d.ims_zy_num as 家宽IMS装移工单量,
+e.ims_zy_no_num as 家宽IMS装移未采集工单量
+ from 
+(select 
+sum(
+case 
+  when oss.is_gigabit = 1 and oo.service_id in (220196,220198,220273,630632,1050632,1260632,220402,1250632,1630774,220613,220200,220413) then 
+    case 
+      when (trunc(gti.orderdispatchtime)+16/24 > gti.orderdispatchtime and gti.moveinstallfinishtime< trunc(gti.orderdispatchtime)+24/24 ) 
+        or (trunc(gti.orderdispatchtime)+16/24 <= gti.orderdispatchtime and  gti.moveinstallfinishtime< trunc(gti.orderdispatchtime)+36/24 )  then 
+        1
+      else
+        0
+      end
+  else 
+    0
+  end
+) as old_gigabit_num,
+sum(
+case 
+  when oss.is_gigabit = 1 and oo.service_id in (220196,220198,220273,630632,1050632,1260632,220402,1250632,1630774,220613,220200,220413) then 
+    case 
+      when trunc(gti.orderdispatchtime) = trunc( gti.moveinstallfinishtime) 
+        and (gti.APPOINTMENTDOORTIME> gti.moveinstallfinishtime or trunc(gti.APPOINTMENTDOORTIME)= trunc( gti.moveinstallfinishtime)) then 
+        1 
+      when trunc(gti.orderdispatchtime) = trunc( gti.moveinstallfinishtime) 
+        and (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end
+  else 
+    0
+  end
+) as new_gigabit_num,
+sum(
+case 
+  when oss.is_gigabit = 1 and oo.service_id in (220196,220198,220273,630632,1050632,1260632,220402,1250632,1630774,220613,220200,220413) then 
+    1
+  else 
+    0
+  end
+) as gigabit_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='VIP' and gti.AREATYPE='城市' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_vip_city,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='VIP' and gti.AREATYPE='农村' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_vip_county,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='普通' and gti.AREATYPE='城市' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_normal_city,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='普通' and gti.AREATYPE='农村' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_normal_county,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='VIP' and gti.AREATYPE='城市' then 
+    case 
+      when ( gti.moveinstallfinishtime-gti.orderdispatchtime)<1 
+        and (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as vip_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='VIP' and gti.AREATYPE='农村' then 
+    case
+      when ( gti.moveinstallfinishtime-gti.orderdispatchtime)<36/24 
+        and (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as vip_county_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='普通' and gti.AREATYPE='城市' then 
+    case
+      when ( gti.moveinstallfinishtime-gti.orderdispatchtime)<2 
+        and (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as normal_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='普通' and gti.AREATYPE='农村' then 
+    case
+      when ( gti.moveinstallfinishtime-gti.orderdispatchtime)<3 
+        and (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as normal_county_num,
+
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='VIP' and gti.AREATYPE='城市' then 
+    case 
+      when (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_vip_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='VIP' and gti.AREATYPE='农村' then 
+    case
+      when  (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_vip_county_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='普通' and gti.AREATYPE='城市' then 
+    case
+      when  (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_normal_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.customertype='普通' and gti.AREATYPE='农村' then 
+    case
+      when (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_normal_county_num,
+sum(
+case 
+  when (gti.alterappointmentdoortime> gti.moveinstallfinishtime or trunc(gti.alterappointmentdoortime)= trunc( gti.moveinstallfinishtime)) then 
+    1
+  else 
+    0
+  end
+) as ontime_num,
+sum(1) as sum_num,
+sum(
+case 
+  when gti.APPOINTMENTDOORTIME-gti.orderdispatchtime <1 then 
+    1
+  else 
+    0
+  end
+) as real_call_num,
+sum(
+case 
+  when oo.service_id in (220196,220198,220197) then 
+    1
+  else 
+    0
+  end
+) as jtkd_zyc_num,
+sum(
+case 
+  when oo.service_id in (220273) then 
+    1
+  else 
+    0
+  end
+) as mbh_z_num,
+sum(
+case 
+  when oo.service_id in (220613) then 
+    1
+  else 
+    0
+  end
+) as znzw_z_num,
+sum(
+case 
+  when oo.service_id in (630632,1050632,1040632) then 
+    1
+  else 
+    0
+  end
+) as paxc_zyc_num,
+sum(
+case 
+  when oo.service_id in (220413) then 
+    1
+  else 
+    0
+  end
+) as hm_z_num,
+sum(
+case 
+  when oo.service_id in (1250632) then 
+    1
+  else 
+    0
+  end
+) as znml_z_num,
+sum(
+case 
+  when oo.service_id in (1260632) then 
+    1
+  else 
+    0
+  end
+) as ytj_z_num,
+sum(
+case 
+  when oo.service_id in (220402) then 
+    1
+  else 
+    0
+  end
+) as znlb_z_num,
+sum(
+case 
+  when oo.service_id in (220200,220202) then 
+    1
+  else 
+    0
+  end
+) as ims_zy_num  ,
+sum(
+case 
+  when gti.ISSPDREACHSTD IS NOT NULL  then 
+    1
+  else 
+    0
+  end
+) as spd_data,
+sum(
+case 
+  when gti.ISSPDREACHSTD ='达标'  then 
+    1
+  else 
+    0
+  end
+) as spd_true_data,
+sum(
+case 
+  when gti.ISLUMINOUSPOWERREACHSTD  IS NOT NULL  then 
+    1
+  else 
+    0
+  end
+) as power_data,
+sum(
+case 
+  when gti.ISLUMINOUSPOWERREACHSTD='达标'  then 
+    1
+  else 
+    0
+  end
+) as power_true_data,
+sum(
+case 
+  when gti.orderdispatchtime<gti.moveinstallfinishtime  
+    and    (gti.moveinstallfinishtime<=gti.APPOINTMENTDOORTIME or trunc(gti.moveinstallfinishtime)=trunc(gti.APPOINTMENTDOORTIME))then 
+    1
+  else 
+    0
+  end
+) as right_data
+from grather_trans_move gti 
+left join om_order oo on gti.pk_id = oo.id
+left join om_so_sla oss on oo.id=oss.service_order_id 
+where oo.order_state = '10F'
+and  gti.moveinstallfinishtime between trunc(sysdate-1) and
+       trunc(sysdate)
+) d ,(
+select COALESCE(sum(case
+                      when oofw.service_id in (220196, 220198, 220197) then
+                       1
+                      else
+                       0
+                    end),
+                0) as jtkd_zyc_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220273) then
+                       1
+                      else
+                       0
+                    end),
+                0) as mbh_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220613) then
+                       1
+                      else
+                       0
+                    end),
+                0) as znzw_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (630632, 1050632, 1040632) then
+                       1
+                      else
+                       0
+                    end),
+                0) as paxc_zyc_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220413) then
+                       1
+                      else
+                       0
+                    end),
+                0) as hm_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (1250632) then
+                       1
+                      else
+                       0
+                    end),
+                0) as znml_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (1260632) then
+                       1
+                      else
+                       0
+                    end),
+                0) as ytj_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220402) then
+                       1
+                      else
+                       0
+                    end),
+                0) as znlb_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220200, 220202) then
+                       1
+                      else
+                       0
+                    end),
+                0) as ims_zy_no_num
+  from om_order_finish_wid oofw
+ where oofw.finish_date between trunc(sysdate-1) and
+       trunc(sysdate)
+   and oofw.service_id in (220196,
+                            220198,
+                            220197,
+                            220273,
+                            220613,
+                            630632,
+                            1050632,
+                            1040632,
+                            220413,
+                            1250632,
+                            1260632,
+                            220402,
+                            220200,
+                            220202)
+   and not exists
+ (select 1
+          from grather_trans_install gti1
+         where gti1.orderid = oofw.order_code)
+    and not exists
+ (select 1
+          from grather_trans_move gti1
+         where gti1.orderid = oofw.order_code)
+     and not exists
+ (select 1
+          from grather_trans_detach gti1
+         where gti1.orderid = oofw.order_code)
+   and oofw.object_type != '007'
+   and ((select attr.character_value
+           from OM_INDEP_PROD_ORDER_ATTR attr, pm_product_character ppc
+          where attr.character_id = ppc.id
+            and attr.service_order_id = oofw.order_id
+            and ppc.code = 'mainBandType') <> '002' or
+       (select attr.character_value
+           from OM_INDEP_PROD_ORDER_ATTR attr, pm_product_character ppc
+          where attr.character_id = ppc.id
+            and attr.service_order_id = oofw.order_id
+            and ppc.code = 'mainBandType') is null)
+) e ;
+
+

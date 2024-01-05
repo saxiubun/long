@@ -1,0 +1,4 @@
+select * from gx_oss.eoms_inf_log a where a.create_date>to_date('2023-09-12 16:30:00','YYYY-MM-DD HH24:MI:SS')
+and a.create_date<to_date('2023-09-12 17:00:00','YYYY-MM-DD HH24:MI:SS')
+and optype='gx_op104' and a.opusername='胡勇'
+--回单：gx_op104

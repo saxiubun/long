@@ -1,0 +1,38 @@
+修改激活工单监控权限
+select * from uos_staff a where a.username='iom';--这个可以看到的作为模板
+select * from uos_staff a where a.username='liyin';--（第一步）
+
+
+---激活工单监控权限控制(第二步) 复制相同权限账号记录
+select usa.*,usa.rowid from uos_staff_area  usa where usa.staff_id=1 order by usa.staff_area_id asc;
+select usa.*,usa.rowid from uos_staff_area  usa where usa.staff_id=413449 order by usa.staff_area_id asc;
+select max(i.staff_area_id)+1 from uos_staff_area i;
+
+declare
+maxid number;
+staff  number;
+begin
+  for th in (select usa.*,usa.rowid from uos_staff_area  usa where usa.staff_id=1 order by usa.staff_area_id asc)loop
+    select max(i.staff_area_id)+1 into maxid from uos_staff_area i;
+    select staff_id into staff from uos_staff a where a.username='liyin';
+    insert into uos_staff_area values(maxid,staff,th.area_id,th.can_grant,null);
+    commit;
+  end loop;
+end;
+
+select a.*,a.rowid from ne_device_priv a where a.staff_id=243519;
+select a.*,a.rowid from ne_device_priv a where a.staff_id=241188;
+select max(i.priv_id)+1 from ne_device_priv i;
+
+declare
+maxid number;
+staffid number;
+begin
+  select max(priv_id) into maxid from ne_device_priv;
+  select staff_id into staffid from uos_staff where username='lizhuxin';
+  for th in (select a.* from ne_device_priv a where a.staff_id=1) loop
+    maxid:=maxid+1;
+    insert into ne_device_priv values(maxid,th.device_id,staffid,th.time_stamp,th.area_id);
+    commit;
+  end loop;
+end;

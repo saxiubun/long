@@ -1,0 +1,45 @@
+
+---------重新下发指令
+BEGIN
+  for th in (select o.yd_id,
+                   o.order_id,
+                   wno.ne_order_id,
+                   (select a.send_cmd
+                      from wo_order_cmd_log a
+                     where a.ne_order_id = wno.ne_order_id
+                       and a.code = '10E'
+                       and a.order_cmd_log_id =
+                           (select min(b.order_cmd_log_id)
+                              from wo_order_cmd_log b
+                             where a.ne_order_id = b.ne_order_id)) 下发指令,
+                   (select a.feedback_cmd
+                      from wo_order_cmd_log a
+                     where a.ne_order_id = wno.ne_order_id
+                       and a.code = '10E'
+                       and a.order_cmd_log_id =
+                           (select min(b.order_cmd_log_id)
+                              from wo_order_cmd_log b
+                             where a.ne_order_id = b.ne_order_id)) 返回报错
+              from wo_order_info o, wo_ne_order wno
+             where o.state_code = '10E'
+               and o.receive_date >
+                   trunc(sysdate)
+               and wno.order_id = o.order_id
+               and wno.state_code = '10E'
+               and exists (select 1
+                      from wo_order_cmd_log wocl
+                     where wocl.ne_order_id = wno.ne_order_id
+                       and wocl.code = '10E')) loop
+    delete from ne_execute_cmdinfo where ne_order_id = i.ne_order_id;
+    delete from ne_execute_info where ne_order_id = i.ne_order_id;
+    COMMIT;
+    update wo_ne_order
+       set state_code = '10I'
+     where ne_order_id = i.ne_order_id;
+    COMMIT;
+    update wo_queue_order
+       SET STATE = '10I'
+     where ne_order_id = i.ne_order_id;
+    COMMIT;
+  end loop;
+end;

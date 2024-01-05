@@ -1,0 +1,17 @@
+--商务快线终端信息
+select /*+ parallel(8) */ oo.order_code,
+(select character_value from gx_oss.om_indep_prod_order_attr where service_order_id=oo.order_id and character_id=72093 and rownum=1
+union
+select character_value from gx_oss.om_indep_prod_order_attr_his where service_order_id=oo.order_id and character_id=72093 and rownum=1
+) 终端厂家,
+(select character_value from gx_oss.om_indep_prod_order_attr where service_order_id=oo.order_id and character_id=72094 and rownum=1
+union
+select character_value from gx_oss.om_indep_prod_order_attr_his where service_order_id=oo.order_id and character_id=72094 and rownum=1
+) 终端型号,
+oo.sn 终端sn 
+from gx_oss.om_order_finish_wid oo
+where ((oo.service_id in (1230632,1240632,1270632,220453,220454,220474,220653,220654,220674) )
+ or 
+(oo.service_id in (220196,220197,220198,220393,1630733,220553) and oo.object_type='007'))
+and oo.order_state='10F'
+and oo.create_date>to_date('2022-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS')

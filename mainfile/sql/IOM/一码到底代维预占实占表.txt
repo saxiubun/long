@@ -1,0 +1,3 @@
+进行终端预占的时候，代维预占记录表有数据select * from daiwei_occupy_record d where d.order_no in( '783-20231028-760013','779-20231024-505176');
+
+代维预占终端详情没有数据select * from daiwei_occupy_terminal d where d.record_id in(3399557, 3462451);--实占取值

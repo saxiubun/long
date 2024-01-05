@@ -1,0 +1,26 @@
+ select oo.order_code 工单编码,oso.acc_nbr 号码,wwo.id 环节ID,utd.tache_name 环节,base_order_id 工单ID,wwos.work_order_state_name 工单状态,
+       wawo.return_content 返回信息,decode(wwo.work_order_type, '10A', '正常定单', '10C', '拆', '其他') 环节状态,
+       wwo.create_date 环节创建时间 ,oos.order_state_name       工单状态,
+       oo.create_date 工单创建时间
+        from wo_work_order wwo
+   join uos_tache_define utd
+   on utd.id=wwo.tache_define_id
+  left join wo_work_order_state wwos
+    on wwo.work_order_state = wwos.work_order_state --工单状态关联
+  left join WO_AUTO_WORK_ORDER WAWO
+    ON WAWO.ID = WWO.ID
+    left join om_order oo
+    on oo.id=wwo.base_order_id
+    left join om_service_order oso
+    on oo.id=oso.id
+    left join om_order_state oos
+    on oo.order_state = oos.order_state --定单状态关联
+   where wwo.id in (select a from (select base_order_id b,max(id) a from wo_work_order where base_order_id 
+   in (select id from om_order where create_date>trunc(sysdate) and order_state not in ('10F','10C') ) group by base_order_id ))
+   and utd.tache_name not like '%外线施工%'
+   and utd.tache_name not like '%资源核查%'
+   and utd.tache_name not like '%网络部%'
+   and utd.tache_name not like '%末端施工%'
+   and utd.tache_name not like '%人工拆%'
+   and utd.tache_name not like '%质差%'
+   

@@ -1,0 +1,6 @@
+declare
+jobid varchar2(255);
+begin
+  dbms_job.submit(jobid,'daoshu_long_qly_sjfh;',to_date('2022-12-29 21:30:00','YYYY-MM-DD HH24:MI:SS'),null);  
+end;
+call daoshu_long_qly_sjfh()

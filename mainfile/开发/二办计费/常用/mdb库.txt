@@ -1,0 +1,13 @@
+连接mdb库：
+登录91.240.1.30 bsstux  App%!2.#3
+执行下面的命令
+--bill
+ZmdbSQL dzdata/dzdata@dzdata -s   
+--cust
+ZmdbSQL dzcust/dzcust@dzcust -s
+--信控库    
+ZmdbSQL dzcredit/dzcredit@dzcredit -s
+--累积量库  
+ZmdbSQL dzaccum/dzaccum@dzaccum -s 
+--流框库 
+ZmdbSQL dzscf/dzscf@dzscf -s

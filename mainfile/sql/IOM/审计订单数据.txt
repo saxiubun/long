@@ -1,0 +1,21 @@
+--包括企宽、商务快线、E企组网、千里眼、云视讯、互联网专线、和商务TV
+--包括企宽、商务快线、E企组网、千里眼、云视讯、互联网专线、和商务TV
+select 
+oo.order_code IOM工单号,
+oso.bss_sserialnumber BOSS工单号,
+oo.order_code 定单编码,
+oso.acc_nbr 业务号码,
+oo.create_date 派单时间,
+ps.name 工单类型,
+oo.finish_date 完成时间,
+ps.name 产品类型
+from gx_oss.om_order oo
+join gx_oss.om_service_order oso
+on oo.id=oso.id
+left join pm_service ps
+on ps.id=oo.service_id
+where oo.finish_date>to_date('2022-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS')
+and oo.finish_date<to_date('2023-06-21 00:00:00','YYYY-MM-DD HH24:MI:SS')
+and ((oo.service_id in (select id from pm_service where name like '%家庭%')
+and oso.object_type='007') or 
+(oo.service_id in (1230632,1240632,1270632,220698,220699,220713,220593,240632,230632,220594,220576,220575,220453,220454,220474,220595,220596)))

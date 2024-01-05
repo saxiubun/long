@@ -1,0 +1,449 @@
+select 
+round(100*d.old_gigabit_num/decode(d.gigabit_num,0,1,d.gigabit_num),2) as 旧口径千兆工单及时率,
+round(100*d.new_gigabit_num/decode(d.gigabit_num,0,1,d.gigabit_num),2) as 新口径千兆工单及时率,
+round(100*d.vip_city_num/decode(d.no_gigabit_vip_city,0,1,d.no_gigabit_vip_city),2) as 旧口径高品质城镇非千兆及时率,
+round(100*d.vip_county_num/decode(d.no_gigabit_vip_county,0,1,d.no_gigabit_vip_county),2) as 旧口径高品质农村非千兆及时率,
+round(100*d.normal_city_num/decode(d.no_gigabit_normal_city,0,1,d.no_gigabit_normal_city),2) as 旧口径普通城镇非千兆及时率,
+round(100*d.normal_county_num/decode(d.no_gigabit_normal_county,0,1,d.no_gigabit_normal_county),2) as 旧口径普通农村非千兆及时率,
+round(100*d.n_vip_city_num/decode(d.no_gigabit_vip_city,0,1,d.no_gigabit_vip_city),2) as 新口径高品质城镇非千兆及时率,
+round(100*d.n_vip_county_num/decode(d.no_gigabit_vip_county,0,1,d.no_gigabit_vip_county),2) as 新口径高品质农村非千兆及时率,
+round(100*d.n_normal_city_num/decode(d.no_gigabit_normal_city,0,1,d.no_gigabit_normal_city),2) as 新口径普通城镇非千兆及时率,
+round(100*d.n_normal_county_num/decode(d.no_gigabit_normal_county,0,1,d.no_gigabit_normal_county),2) as 新口径普通农村非千兆及时率,
+round(100*d.ontime_num/decode(d.sum_num,0,1,d.sum_num),2) as 履约率,
+round(100*d.real_call_num/decode(d.sum_num,0,1,d.sum_num),2) as 首响及时率,
+round(100*d.spd_true_data/decode(d.spd_data,0,1,d.spd_data),2) as 测速达标率,
+round(100*d.power_true_data/decode(d.power_data,0,1,d.power_data),2) as 光功率达标率,
+round(100*d.right_data/decode(d.sum_num,0,1,d.sum_num),2) as 数据准确率,
+round(100*d.right_data2/decode(d.sum_num,0,1,d.sum_num),2) as 数据准确率剔除改约最终上门时间,
+d.jtkd_zyc_num as 家宽装移拆工单量,
+e.jtkd_zyc_no_num as 家宽装移拆未采集工单量,
+d.mbh_z_num as 魔百和装机工单量,
+e.mbh_z_no_num as 魔百和装机未采集工单量,
+d.znzw_z_num as 智能组网装机工单量,
+e.znzw_z_no_num as 智能组网装机未采集工单量,
+d.paxc_zyc_num as 平安乡村装移拆工单量,
+e.paxc_zyc_no_num as 平安乡村装移拆未采集工单量,
+d.hm_z_num as 和目装机工单量,
+e.hm_z_no_num as 和目装机未采集工单量,
+d.znml_z_num as 智能门铃装机工单量,
+e.znml_z_no_num as 智能门铃装机未采集工单量,
+d.ytj_z_num as 云台机装机工单量,
+e.ytj_z_no_num as 云台机装机未采集工单量,
+d.znlb_z_num as 智能喇叭装机工单量,
+e.znlb_z_no_num as 智能喇叭装机未采集工单量,
+d.ims_zy_num as 家宽IMS装移工单量,
+e.ims_zy_no_num as 家宽IMS装移未采集工单量
+ from 
+(select 
+sum(
+    case 
+      when oss.is_gigabit = 1 AND (trunc(to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))+16/24 > to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS') and to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS')< trunc(to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))+24/24 ) 
+        or oss.is_gigabit = 1 AND (trunc(to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))+16/24 <= to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS') and to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS')< trunc(to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))+36/24 )  then 
+        1
+      else
+        0
+      end
+) as old_gigabit_num,
+sum(
+    case 
+      when oss.is_gigabit = 1 AND trunc(to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS')) = trunc(to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS')) 
+        and (to_date( gti.预约时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.预约时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1 
+      when oss.is_gigabit = 1 AND trunc(to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS')) = trunc(to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS')) 
+        and (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.装机完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end
+) as new_gigabit_num,
+sum(case 
+      when oss.is_gigabit = 1 THEN 
+      1 
+      ELSE
+      0
+     END ) as gigabit_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='VIP' and gti.地域属性='城市' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_vip_city,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='VIP' and gti.地域属性='农村' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_vip_county,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='普通' and gti.地域属性='城市' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_normal_city,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='普通' and gti.地域属性='农村' then 
+    1
+  else 
+    0
+  end
+) as no_gigabit_normal_county,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='VIP' and gti.地域属性='城市' then 
+    case 
+      when (to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS')-to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))<1 
+        and (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as vip_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='VIP' and gti.地域属性='农村' then 
+    case
+      when (to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS')-to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))<36/24 
+        and (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as vip_county_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='普通' and gti.地域属性='城市' then 
+    case
+      when (to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS')-to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))<2 
+        and (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as normal_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='普通' and gti.地域属性='农村' then 
+    case
+      when (to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS')-to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS'))<3 
+        and (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as normal_county_num,
+
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='VIP' and gti.地域属性='城市' then 
+    case 
+      when (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_vip_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='VIP' and gti.地域属性='农村' then 
+    case
+      when  (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_vip_county_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='普通' and gti.地域属性='城市' then 
+    case
+      when  (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_normal_city_num,
+sum(
+case 
+  when oss.is_gigabit != 1 and gti.客户类型='普通' and gti.地域属性='农村' then 
+    case
+      when (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+        1
+      else
+        0
+      end 
+  else 
+    0
+  end
+) as n_normal_county_num,
+sum(
+case 
+  when (to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')>to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))= trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+    1
+  else 
+    0
+  end
+) as ontime_num,
+sum(1) as sum_num,
+sum(
+case 
+  when to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')-to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS') <1 then 
+    1
+  else 
+    0
+  end
+) as real_call_num,
+sum(
+case 
+  when oofw.service_id in (220196,220198,220197) then 
+    1
+  else 
+    0
+  end
+) as jtkd_zyc_num,
+sum(
+case 
+  when oofw.service_id in (220273) then 
+    1
+  else 
+    0
+  end
+) as mbh_z_num,
+sum(
+case 
+  when oofw.service_id in (220613) then 
+    1
+  else 
+    0
+  end
+) as znzw_z_num,
+sum(
+case 
+  when oofw.service_id in (630632,1050632,1040632) then 
+    1
+  else 
+    0
+  end
+) as paxc_zyc_num,
+sum(
+case 
+  when oofw.service_id in (220413) then 
+    1
+  else 
+    0
+  end
+) as hm_z_num,
+sum(
+case 
+  when oofw.service_id in (1250632) then 
+    1
+  else 
+    0
+  end
+) as znml_z_num,
+sum(
+case 
+  when oofw.service_id in (1260632) then 
+    1
+  else 
+    0
+  end
+) as ytj_z_num,
+sum(
+case 
+  when oofw.service_id in (220402) then 
+    1
+  else 
+    0
+  end
+) as znlb_z_num,
+sum(
+case 
+  when oofw.service_id in (220200,220202) then 
+    1
+  else 
+    0
+  end
+) as ims_zy_num  ,
+sum(
+case 
+  when gti.测速结果是否达标 IS NOT NULL  then 
+    1
+  else 
+    0
+  end
+) as spd_data,
+sum(
+case 
+  when gti.测速结果是否达标 ='达标'  then 
+    1
+  else 
+    0
+  end
+) as spd_true_data,
+sum(
+case 
+  when gti.光功率是否达标  IS NOT NULL  then 
+    1
+  else 
+    0
+  end
+) as power_data,
+sum(
+case 
+  when gti.光功率是否达标='达标'  then 
+    1
+  else 
+    0
+  end
+) as power_true_data,
+sum(
+case 
+  when to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS')<to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')  
+    and to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')<to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') 
+	and to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')<=to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS')  
+	and (to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS')<=to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS') or trunc(to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS')) = trunc(to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS'))) then 
+    1
+  else 
+    0
+  end
+) as right_data,
+sum(
+case 
+  when to_date( gti.工单派发时间,'yyyy-mm-dd HH24:MI:SS')<to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')  
+    and to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')<to_date( gti.移机装完成时间,'yyyy-mm-dd HH24:MI:SS') 
+	and to_date( gti.预约上门时间,'yyyy-mm-dd HH24:MI:SS')<=to_date( gti.改约最终上门时间,'yyyy-mm-dd HH24:MI:SS') then 
+    1
+  else 
+    0
+  end
+) as right_data2
+from jk_om_order_cj_all_yiji gti 
+left join om_order_finish_wid oofw on gti.工单ID = oofw.ORDER_CODE
+left join om_so_sla oss on oofw.order_id=oss.service_order_id
+) d ,(
+select COALESCE(sum(case
+                      when oofw.service_id in (220196, 220198, 220197) then
+                       1
+                      else
+                       0
+                    end),
+                0) as jtkd_zyc_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220273) then
+                       1
+                      else
+                       0
+                    end),
+                0) as mbh_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220613) then
+                       1
+                      else
+                       0
+                    end),
+                0) as znzw_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (630632, 1050632, 1040632) then
+                       1
+                      else
+                       0
+                    end),
+                0) as paxc_zyc_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220413) then
+                       1
+                      else
+                       0
+                    end),
+                0) as hm_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (1250632) then
+                       1
+                      else
+                       0
+                    end),
+                0) as znml_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (1260632) then
+                       1
+                      else
+                       0
+                    end),
+                0) as ytj_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220402) then
+                       1
+                      else
+                       0
+                    end),
+                0) as znlb_z_no_num,
+       COALESCE(sum(case
+                      when oofw.service_id in (220200, 220202) then
+                       1
+                      else
+                       0
+                    end),
+                0) as ims_zy_no_num
+  from om_order_finish_wid oofw
+ where oofw.finish_date between trunc(sysdate-1) and
+       trunc(sysdate)
+   and oofw.service_id in (220196,
+                            220198,
+                            220197,
+                            220273,
+                            220613,
+                            630632,
+                            1050632,
+                            1040632,
+                            220413,
+                            1250632,
+                            1260632,
+                            220402,
+                            220200,
+                            220202)
+   and not exists
+ (select 1
+          from jk_om_order_cj_all_yiji gti1
+         where gti1.工单ID = oofw.order_code)
+   and oofw.object_type != '007'
+   and ((select attr.character_value
+           from OM_INDEP_PROD_ORDER_ATTR attr, pm_product_character ppc
+          where attr.character_id = ppc.id
+            and attr.service_order_id = oofw.order_id
+            and ppc.code = 'mainBandType') <> '002' or
+       (select attr.character_value
+           from OM_INDEP_PROD_ORDER_ATTR attr, pm_product_character ppc
+          where attr.character_id = ppc.id
+            and attr.service_order_id = oofw.order_id
+            and ppc.code = 'mainBandType') is null)	
+) e ;
+
+

@@ -1,0 +1,22 @@
+先打开openVPN
+账务中心测试环境：
+91.240.1.24
+wls12r2  zTeAd.m@3
+/app/wls12r2/xhzw/zd
+
+openapi替换24主机/app/wls12r2/bea/user_projects/domains/gxjf_domain/apps/webapp/accounting-openapi 上面的war包
+
+去/app/wls12r2/bea/user_projects/domains/gxjf_domain/bin 重启相关服务
+
+
+xxlJOB 需要更新
+/app/wls12r2/bea/user_projects/domains/gxjf_domain/apps/webapp/accounting-jobgxlocal
+然后去重启
+sh ps_jobgxlocal.sh
+sh killjobgxlocal.sh
+sh start_tst-acctweb-9026-jobgxlocal.sh	
+
+日志：/app/wls12r2/bea/user_projects/domains/gxjf_domain/apps/ZSMART_HOME/log/tst-acctweb-9026-jobgxlocal/
+/app/wls12r2/bea/user_projects/domains/gxjf_domain/apps/ZSMART_HOME/joblog
+启动日志：tail -300f jobgxlocal.log
+tail -100f xxx.log | grep ‘2019-10-29 16:4[0-9]’

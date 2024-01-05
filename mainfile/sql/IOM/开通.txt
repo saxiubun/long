@@ -1,0 +1,8 @@
+
+select * from om_service_order where loid='7186920510'
+select * from wo_order_info where nbr='18269040054'
+select * from wo_order_cmd_log where order_cmd_log_id=133188021
+
+select * from inf_log_interface where order_id=133188021
+
+select * from om_order_track

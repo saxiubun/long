@@ -1,0 +1,26 @@
+select oo.id,oso.acc_nbr,
+oso.bss_sserialnumber,
+oo.order_code,
+oso.sn 家宽SN,
+zzdel.equipmentname 政企设备,
+zzdel.sn 政企SN,
+decode(zzdel.state,'1','有效',null,'','无效') 政企状态,
+zzdel.model 政企型号,
+decode(zzdel.terminal_out_flag,'0','出库成功','1','出库失败') 政企出库标志,
+zdel.equipmentname ZW设备,
+zdel.sn ZWSN,zdel.model ZWmodel,
+decode(zdel.state,'1','有效',null,'','0','无效') ZWstate,
+decode(zdel.terminal_out_flag,'0','出库成功',null,'','出库失败') ZWflag
+from om_order oo
+join om_service_order oso
+on oo.id=oso.id
+left join zq_znzw_div_equipment_list zzdel
+on zzdel.order_id=oo.id
+left join om_group_construct_order_rela ogcor
+on ogcor.order_id=oo.id
+left join znzw_div_equipment_list zdel
+on zdel.group_order_id=ogcor.group_order_id
+where oo.service_id = 220698
+   and oo.create_date <
+       to_date('2023-05-15 00:00:00', 'YYYY-MM-DD HH24:MI:SS')
+   and oo.order_state='10F'

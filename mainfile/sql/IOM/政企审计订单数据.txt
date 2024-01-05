@@ -1,0 +1,46 @@
+select /*+ parallel(8) */
+oo.order_code 工单编码,
+ (select character_value
+          from gx_oss.om_indep_prod_order_attr
+         where service_order_id = oo.order_id
+           and rownum <= 1
+           and character_id = 72104
+           union
+           select character_value
+          from gx_oss.om_indep_prod_order_attr_his
+         where service_order_id = oo.order_id
+           and rownum <= 1
+           and character_id = 72104) 客户名称,
+(select character_value
+          from gx_oss.om_indep_prod_order_attr
+         where service_order_id = oo.order_id
+           and rownum <= 1
+           and character_id = 72105
+           union
+           select character_value
+          from gx_oss.om_indep_prod_order_attr_his
+         where service_order_id = oo.order_id
+           and rownum <= 1
+           and character_id = 72105) 客户编码,
+oo.acc_nbr 业务号码,
+oo.user_contact_address 地址信息,
+oo.user_area_name 地市,
+oo.order_title 工单主题,
+oo.accept_date 工单受理时间,
+oos.order_state_name 工单状态,
+oo.finish_date 工单完成时间,
+round(((finish_date  - create_date) * 24),2 ) 处理时长小时竣工减创建,
+finish_date 竣工时间,
+create_date 创建时间,
+oo.service_name 业务类型,
+oo.accept_staff_name 受理人,
+oo.party_name 装维人员姓名,
+oo.org_name 装维人员归属部门
+ from gx_oss.om_order_finish_wid oo
+ left join gx_oss.om_order_state oos
+ on oos.order_state=oo.order_state
+ where ((oo.service_id in (1230632,1240632,1270632,220453,220454,220474,220594,220576,220575,220593,240632,230632,220595,220596,220653,220654,220674) )
+ or 
+(oo.service_id in (220196,220197,220198,220393,1630733,220553) and oo.object_type='007'))
+and oo.order_state='10F'
+and oo.create_date>to_date('2022-01-01 00:00:00','YYYY-MM-DD HH24:MI:SS')

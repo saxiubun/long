@@ -1,0 +1,4 @@
+--卡boss归档 取模
+select mod(o.id,17),count(1) from gx_oss.Inf_Iom_Retsheet o where o.state='10I'  and o.inf_type='098' group by mod(o.id,17);
+
+select o.*,o.rowid from gx_oss.Inf_Iom_Retsheet o where o.state='10I'  and o.inf_type='098' and mod(o.id,17)=8 order  by o.id;

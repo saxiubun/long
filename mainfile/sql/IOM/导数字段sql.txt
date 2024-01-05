@@ -1,0 +1,65 @@
+create table daoshu_long_ims parallel 8 as 
+select /*+ parallel(8) */
+ oo.order_code 工单编码,
+ ps.name 业务类型,
+ oo.order_title 定单主题,
+ oso.bss_sserialnumber BOSS工单号,
+ oso.acc_nbr 号码,
+ oso.object_type,
+ ua.area_name 地市,
+ (select bc.county_name
+    from boss_country bc
+   where bc.county_code = (select a.character_value
+                             from om_indep_prod_order_attr a
+                            where a.character_id = 72111
+                              and a.service_order_id = oo.id
+                              and rownum = 1)
+     and rownum = 1) 区县,
+ (select character_value
+    from om_indep_prod_order_attr
+   where service_order_id = oo.id
+     and character_id = 72138
+     and rownum = 1) 区域属性,
+ oos.order_state_name 定单状态,
+ om.acc_nbr 宽带号码,
+ (select cust_name
+    from pm_cust
+   where id = (select party_id
+                 from om_so_party a
+                where a.service_order_id = oo.id
+                  and rownum = 1)) 用户名称,
+ (select mobile_phone
+    from pm_linkman
+   where id = (select party_id
+                 from om_so_party a
+                where a.service_order_id = oo.id
+                  and rownum = 1)) 用户手机,
+ OSO.User_Contact_Address 用户安装地址,
+ om.new_offer_name 套餐信息,
+ (select calltime
+    from inf_boss_sheet
+   where rownum = 1
+     and sserialnumber = oso.bss_sserialnumber) BOSS受理时间,
+ (select create_date
+    from inf_boss_sheet
+   where rownum = 1
+     and sserialnumber = oso.bss_sserialnumber) BOSS派单时间,
+ om.wo_create_date 外线接单时间,
+ --om.is_back_return 是否后端驳回,
+ --om.back_return_date IOM后端驳回时间,
+ om.WITHDRAW_ORDER_DATE BOSS撤单时间,
+ oso.grid_name          所属网格,
+ oso.community_name     所属小区
+  from om_order oo
+  left join om_service_order oso
+    on oo.id = oso.id
+  left join uos_area ua
+    on ua.area_id = oo.area_id
+  left join om_order_finish_wid om
+    on om.order_id = oo.id
+  left join om_order_state oos
+    on oo.order_state = oos.order_state
+  left join pm_service ps
+    on ps.id = oo.service_id
+ where oo.order_state not in ('10F', '10C')
+   and oo.service_id in (220200, 220201, 220202, 1630673, 1630674, 1630675)

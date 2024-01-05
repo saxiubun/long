@@ -1,0 +1,6 @@
+--主机信息
+91.240.1.24
+wls12r2 zTeAd.m@3
+--控制台
+http://91.240.1.24:9001/console/login/LoginForm.jsp
+weblogic ORAnew_123

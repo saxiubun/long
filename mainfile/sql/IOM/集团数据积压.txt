@@ -1,0 +1,29 @@
+
+select '集团数据积压情况' as v1, count(1) as value
+  from gx_oss.om_order                 a,
+       gx_oss.om_service_order         b,
+       gx_oss.om_indep_prod_order_attr c
+ where a.id = b.id
+   and b.id = c.service_order_id
+   and b.object_type != '007'
+   and c.character_id = 72098
+   and c.character_value != '002'
+   and a.service_id in ('220201',
+                        '220200',
+                        '220202',
+                        '220413',
+                        '220197',
+                        '220196',
+                        '220198',
+                        '220273',
+                        '1040632',
+                        '630632',
+                        '1050632',
+                        '1260632',
+                        '220402',
+                        '1250632',
+                        '220613')
+   and a.order_state in ('10F', '10C')
+   and a.state_date between trunc(sysdate - 1) and trunc(sysdate)
+   and not exists
+ (select 1 from gx_oss.grather_trans_info c where a.id = c.orderid)

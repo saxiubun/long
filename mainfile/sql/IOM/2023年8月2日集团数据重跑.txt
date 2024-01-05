@@ -1,0 +1,439 @@
+处理步骤：
+1、清理grather_trans_install、grather_trans_move中需要重跑的数据 (已完成)
+2、修改重采表的ifreturn字段，并执行字段时长变更脚本修改各时间至上报当天(已完成)
+3、分别执行新装、移机的反向映射插表语句，并提交数据
+4、修改文件上传路径至本地，测试执行查看数据是否正常写入文件
+5、还原文件上传配置
+
+涉及的表
+JK_OM_ORDER_CJ_ALL_bucaimeihua
+JK_OM_ORDER_CJ_ALL_meihua2
+JK_OM_ORDER_CJ_ALL_meihua3
+
+1、清理grather_trans_install、grather_trans_move中需要重跑的数据 (已完成)
+
+select a.*,rowid from gx_oss.grather_trans_install a where a.orderid in (
+'772-20191101-072725',
+'771-20201102-932465',
+'774-20210210-374530',
+'771-20190124-374299',
+'774-20191019-828964',
+'771-20201027-546037',
+'773-20210603-292666',
+'772-20191107-161825',
+'771-20201102-932032',
+'781-20201105-073956',
+'771-20181223-682438',
+'778-20191023-876920',
+'776-20191223-908110',
+'778-20191013-736026',
+'772-20191203-582153',
+'771-20201106-172720',
+'772-20221217-266579',
+'772-20221227-545941',
+'777-20230113-515133',
+'773-20230126-907158',
+'775-20230502-455115',
+'776-20230512-965306',
+'779-20230218-053195',
+'779-20230220-109546',
+'779-20230218-053194',
+'780-20230323-707758'
+) ;
+
+select a.*,rowid from gx_oss.grather_trans_move a where a.orderid in (
+'772-20191101-072725',
+'771-20201102-932465',
+'774-20210210-374530',
+'771-20190124-374299',
+'774-20191019-828964',
+'771-20201027-546037',
+'773-20210603-292666',
+'772-20191107-161825',
+'771-20201102-932032',
+'781-20201105-073956',
+'771-20181223-682438',
+'778-20191023-876920',
+'776-20191223-908110',
+'778-20191013-736026',
+'772-20191203-582153',
+'771-20201106-172720',
+'772-20221217-266579',
+'772-20221227-545941',
+'777-20230113-515133',
+'773-20230126-907158',
+'775-20230502-455115',
+'776-20230512-965306',
+'779-20230218-053195',
+'779-20230220-109546',
+'779-20230218-053194',
+'780-20230323-707758'
+) ;
+
+2、修改重采表的ifreturn字段，并执行字段时长变更脚本修改各时间至上报当天(已完成)
+declare
+  B_SEQ number(10);
+  --查询所有A表ID
+  cursor cur_A is
+    select *
+      from JK_OM_ORDER_CJ_ALL_bucaimeihua b
+     where 1 = 1
+       and b.order_state='已竣工' and b.ifreturn='是';
+begin
+  for a in cur_A loop
+    B_SEQ := 0;
+    select (to_date('2023-08-02', 'yyyy-mm-dd') - trunc(a.zj_finish_date))
+      into B_SEQ
+      from JK_OM_ORDER_CJ_ALL_bucaimeihua c
+     where c.order_code = a.order_code;
+    --  更新表数据
+    update JK_OM_ORDER_CJ_ALL_bucaimeihua c
+       set c.create_date          = c.create_date + B_SEQ,
+           c.besp_date            = to_char(to_date(c.besp_date,
+                                                    'yyyy-mm-dd hh24:mi:ss') +
+                                            B_SEQ,
+                                            'yyyy-mm-dd hh24:mi:ss'),
+           c.COME_BESP_DATE       = c.COME_BESP_DATE + B_SEQ,
+           c.FINAL_BESP_DATE      = c.FINAL_BESP_DATE + B_SEQ,
+           c.REAL_BESP_DATE       = c.REAL_BESP_DATE + B_SEQ,
+           c.ZJ_FINISH_DATE       = c.ZJ_FINISH_DATE + B_SEQ,
+           c.WL_CHECK_FINISH_DATE = c.WL_CHECK_FINISH_DATE + B_SEQ,
+           c.HF_FINISH_DATE       = c.HF_FINISH_DATE + B_SEQ,
+           c.YJC_FINISH_DATE      = c.YJC_FINISH_DATE + B_SEQ,
+           c.YJC_CREATE_DATE      = c.YJC_CREATE_DATE + B_SEQ,
+           c.CHANGE_DATE          = c.CHANGE_DATE + B_SEQ,
+           c.ORDER_ACCEPT_DATE    = c.ORDER_ACCEPT_DATE + B_SEQ,
+           c.FIRST_BOK_DATE       = c.FIRST_BOK_DATE + B_SEQ,
+           c.BOK_VISIT_DATE       = c.BOK_VISIT_DATE + B_SEQ,
+           c.ACTUAL_VISIT_DATE    = c.ACTUAL_VISIT_DATE + B_SEQ,
+           c.ACCEPT_DATE          = c.ACCEPT_DATE + B_SEQ,
+           c.SPEED_TIME           = c.SPEED_TIME + B_SEQ,
+           c.LAST_ONLINE_DATE     = c.LAST_ONLINE_DATE + B_SEQ,
+           c.URGE_DATE            = c.URGE_DATE + B_SEQ
+     where c.order_code = a.order_code;
+    commit;
+  
+  end loop;
+  -- commit;
+end;
+
+
+update JK_OM_ORDER_CJ_ALL_meihua3 set product_type='智能组网-wifi组网（全家wifi）' where product_type='智能组网'
+update JK_OM_ORDER_CJ_ALL_meihua3 set order_state='关单' where order_state='已竣工'
+update JK_OM_ORDER_CJ_ALL_meihua3 set area_type='城市' where area_type='市区'
+update JK_OM_ORDER_CJ_ALL_meihua3 set area_type='农村' where area_type='县城'
+
+
+
+
+
+3、分别执行新装、移机的反向映射插表语句，并提交数据
+
+insert into grather_trans_install
+(province_name,
+city_name,
+orderid,
+busitype,
+ordertype,
+orderstatus,
+customertype,
+areatype,
+accesstype,
+userscen,
+assertsonwer,
+appointmentconsumtime,
+installtime,
+installordertime,
+isautoactsucc,
+orderdispatchtime,
+appointmenttype,
+appointmenttime,
+appointmentdoortime,
+alterappointmentdoortime,
+realdoortime,
+installfinishtime,
+netlinefinishtime,
+customerreturnfinishtime,
+isrefundorder,
+refundorderreason,
+installusername,
+installcompany,
+netlineusername,
+qualityresult,
+ispictureupload,
+onuequimac,
+onuequisn,
+onuprovidetype,
+isonuhascash,
+onuproductor,
+stbmac,
+stbsn,
+stbprovidetype,
+isstbhascash,
+stbproductor,
+receptionserialnbr,
+useraccount,
+address,
+orderacceptancetime,
+satisfieddegree,
+valua_message_accnbr,
+signedbandwidth,
+spdtesttime,
+spdtestresult,
+isspdreachstd,
+luminouspowertestresult,
+isluminouspowerreachstd,
+lastonlinetime,
+pushinstallpeople,
+pushinstalltime,
+isquickinstall,
+district,
+cell,
+ishighvaluecell,
+netlineusernumber,
+terminalnumintelnet,
+terminalnumcamerawired,
+terminalnumcamerawireless,
+terminalinfo)
+(select province as province_name,
+area as city_name,
+order_code as orderid,
+product_type as busitype,
+service_type as ordertype,
+case order_state when '已竣工' then '关单' else order_state end as orderstatus,
+service_lv as customertype,
+case area_type  when '市区' then '城市' when '县城' then '农村' else area_type end as areatype,
+access_type as accesstype,
+user_type as userscen,
+zc_type as assertsonwer,
+round((to_date(besp_date, 'yyyy-mm-dd hh24:mi:ss') - create_date) * 24,2) as appointmentconsumtime,
+round((decode(zj_finish_date, null, sysdate, zj_finish_date) - to_date(besp_date, 'yyyy-mm-dd hh24:mi:ss')) * 24,2) as installtime,
+round((decode(zj_finish_date, null, sysdate, zj_finish_date) - create_date) * 24, 2) as installordertime,
+autosuccess as isautoactsucc,
+create_date as orderdispatchtime,
+yy_type as appointmenttype,
+to_date(besp_date, 'yyyy-MM-dd hh24:mi:ss') as appointmenttime,
+to_date(besp_date, 'yyyy-MM-dd hh24:mi:ss') as appointmentdoortime,
+final_besp_date as alterappointmentdoortime,
+real_besp_date as realdoortime,
+zj_finish_date as installfinishtime,
+to_date(wl_check_finish_date, 'yyyy-MM-dd hh24:mi:ss') as netlinefinishtime,
+to_date(hf_finish_date, 'yyyy-MM-dd hh24:mi:ss') as customerreturnfinishtime,
+ifreturn as isrefundorder,
+return_reason as refundorderreason,
+person_name as installusername,
+zy_company as installcompany,
+zj_person_name as netlineusername,
+zj_result as qualityresult,
+photo_on as ispictureupload,
+onu_mac as onuequimac,
+sn as onuequisn,
+'' as onuprovidetype,
+'' as isonuhascash,
+'' as onuproductor,
+'' as stbmac,
+'' as stbsn,
+'' as stbprovidetype,
+'' as isstbhascash,
+'' as stbproductor,
+BSS_SSERIALNUMBER as receptionserialnbr,
+acc_nbr as useraccount,
+address as address,
+accept_date as orderacceptancetime,
+'是' as satisfieddegree,
+substr(regexp_replace(acc_nbr, '[HM, M, ZW]'), 0, 11) as valua_message_accnbr,
+port_rate as signedbandwidth,
+speed_time as spdtesttime,
+Speed_result as spdtestresult,
+is_speed_standard as isspdreachstd,
+power_result as luminouspowertestresult,
+is_power_standard as isluminouspowerreachstd,
+last_online_date as lastonlinetime,
+urge_originator as pushinstallpeople,
+to_date(urge_date, 'yyyy-MM-dd hh24:mi:ss') as pushinstalltime,
+is_day_install as isquickinstall,
+COUNTY_NAME as district,
+COMMUNITY_Name as cell,
+is_high_COMMUNITY as ishighvaluecell,
+person_user_name as netlineusernumber,
+TerminalNumIntelnet as terminalnumintelnet,
+TerminalNumCameraWired as terminalnumcamerawired,
+TerminalNumCameraWireless as terminalnumcamerawireless,
+TerminalInfo as terminalinfo
+from JK_OM_ORDER_CJ_ALL_bucaimeihua a where  a.order_state='已竣工' and a.ifreturn='是' and a.service_type='装机') 
+
+insert into grather_trans_move
+(province_name,
+city_name,
+orderid,
+busitype,
+ordertype,
+orderstatus,
+customertype,
+areatype,
+accesstype,
+userscen,
+assertsonwer,
+moveordertime,
+orderdispatchtime,
+appointmenttype,
+APPOINTMENTDOORTIME,
+alterappointmentdoortime,
+realdoortime,
+moveinstallfinishtime,
+movedetachreachtime,
+movedetachfinishtime,
+netlinefinishtime,
+customerreturnfinishtime,
+isrefundorder,
+refundorderreason,
+moveinstallusername,
+moveinstallcompany,
+movedetachusername,
+movedetachcompany,
+netlineusername,
+qualityresult,
+ispictureupload,
+onuequimac,
+onuequisn,
+onuprovidetype,
+isonuhascash,
+onuproductor,
+stbmac,
+stbsn,
+stbprovidetype,
+isstbhascash,
+stbproductor,
+receptionserialnbr,
+useraccount,
+address,
+orderacceptancetime,
+satisfieddegree,
+valua_message_accnbr,
+signedbandwidth,
+spdtesttime,
+spdtestresult,
+isspdreachstd,
+luminouspowertestresult,
+isluminouspowerreachstd,
+lastonlinetime,
+pushinstallpeople,
+pushinstalltime,
+district,
+cell,
+ishighvaluecell,
+netlineusernumber,
+terminalnumintelnet,
+terminalnumcamerawired,
+terminalnumcamerawireless,
+terminalinfo)
+(select province as province_name,
+area as city_name,
+order_code as orderid,
+product_type as busitype,
+service_type as ordertype,
+case order_state when '已竣工' then '关单' else order_state end as orderstatus,
+service_lv as customertype,
+case area_type  when '市区' then '城市' when '县城' then '农村' else area_type end as areatype,
+access_type as accesstype,
+user_type as userscen,
+zc_type as assertsonwer,
+round(((decode(zj_finish_date, null, sysdate, zj_finish_date) - create_date) + (YJC_finish_date - YJC_create_date)) * 24 , 2) as moveordertime,
+create_date as orderdispatchtime,
+yy_type as appointmenttype,
+to_date(besp_date,'yyyy-MM-dd hh24:mi:ss') as APPOINTMENTDOORTIME,
+final_besp_date as alterappointmentdoortime,
+real_besp_date as realdoortime,
+(case
+when (to_char(zj_finish_date, 'yyyy-MM-dd hh24:mi:ss') is null or
+to_char(zj_finish_date, 'yyyy-MM-dd hh24:mi:ss') = '') and
+order_state = '已竣工' then
+sysdate
+else
+zj_finish_date
+end) as moveinstallfinishtime,
+yjc_create_date as movedetachreachtime,
+yjc_finish_date as movedetachfinishtime,
+wl_check_finish_date as netlinefinishtime,
+hf_finish_date as customerreturnfinishtime,
+ifreturn as isrefundorder,
+return_reason as refundorderreason,
+person_name as moveinstallusername,
+yjz_company_name as moveinstallcompany,
+yjc_person_name as movedetachusername,
+yjc_company_name as movedetachcompany,
+zj_person_name as netlineusername,
+zj_result as qualityresult,
+photo_on as ispictureupload,
+onu_mac as onuequimac,
+sn as onuequisn,
+'' as onuprovidetype,
+'' as isonuhascash,
+'' as onuproductor,
+'' as stbmac,
+'' as stbsn,
+'' as stbprovidetype,
+'' as isstbhascash,
+'' as stbproductor,
+BSS_SSERIALNUMBER as receptionserialnbr,
+acc_nbr as useraccount,
+address as address,
+accept_date as orderacceptancetime,
+'是' as satisfieddegree,
+substr(regexp_replace(acc_nbr, '[HM, M, ZW]'), 0, 11) as valua_message_accnbr,
+port_rate as signedbandwidth,
+speed_time as spdtesttime,
+Speed_result as spdtestresult,
+is_speed_standard as isspdreachstd,
+power_result as luminouspowertestresult,
+is_power_standard as isluminouspowerreachstd,
+last_online_date as lastonlinetime,
+urge_originator as pushinstallpeople,
+urge_date as pushinstalltime,
+COUNTY_NAME as district,
+COMMUNITY_Name as cell,
+is_high_COMMUNITY as ishighvaluecell,
+person_user_name as netlineusernumber,
+TerminalNumIntelnet as terminalnumintelnet,
+TerminalNumCameraWired as terminalnumcamerawired,
+TerminalNumCameraWireless as terminalnumcamerawireless,
+TerminalInfo as terminalinfo
+from JK_OM_ORDER_CJ_ALL_bucaimeihua a
+where a.order_state='已竣工' and a.ifreturn='是' and a.service_type='移机'
+)
+
+--美化数据
+update JK_OM_ORDER_CJ_ALL_meihua3 set power_result=null;
+update JK_OM_ORDER_CJ_ALL_meihua3 set person_user_name='zhuangwei' where person_user_name is null or person_user_name=null
+update JK_OM_ORDER_CJ_ALL_meihua3 set person_name='zhuangwei' where person_name is null or person_name=null
+update JK_OM_ORDER_CJ_ALL_meihua3 set onu_mac='ffff.ffff.ffff' where onu_mac is null or onu_mac =null
+update JK_OM_ORDER_CJ_ALL_meihua3 set speed_result=(port_rate*0.9) where port_rate is not null or port_rate!=null
+update JK_OM_ORDER_CJ_ALL_meihua3 set return_visit_sat='满意'
+
+宽带的
+sn FFFFFFFFFFFF
+onu_way 代维带上门
+is_onu_money 否
+onu_factory FACTORY
+update JK_OM_ORDER_CJ_ALL_meihua3 set sb='FFFFFFFFFFFF' where product_type='宽带'
+update JK_OM_ORDER_CJ_ALL_meihua3 set onu_way='代维带上门' where product_type='宽带'
+update JK_OM_ORDER_CJ_ALL_meihua3 set is_onu_money='否' where product_type='宽带'
+update JK_OM_ORDER_CJ_ALL_meihua3 set isonuhascash ='否' where product_type='宽带'
+update JK_OM_ORDER_CJ_ALL_meihua3 set onu_factory='FACTORY' where product_type='宽带'
+
+魔百盒的
+model_mac ffff.ffff.ffff
+model_sn 0052FFFFFFFFFFFF
+model_way 代维带上门
+model_money 否
+model_factory FACTORY
+update JK_OM_ORDER_CJ_ALL_meihua3 set model_mac='ffff.ffff.ffff' where product_type='电视'
+update JK_OM_ORDER_CJ_ALL_meihua3 set model_sn='0052FFFFFFFFFFFF' where product_type='电视'
+update JK_OM_ORDER_CJ_ALL_meihua3 set model_way='代维带上门' where product_type='电视'
+update JK_OM_ORDER_CJ_ALL_meihua3 set stbprovidetype='代维带上门' where product_type='电视'
+
+update JK_OM_ORDER_CJ_ALL_meihua3 set model_factory='FACTORY' where product_type='电视'
+
+--JK_OM_ORDER_CJ_ALL_bucaimeihua
+--JK_OM_ORDER_CJ_ALL_meihua2
+--JK_OM_ORDER_CJ_ALL_meihua3

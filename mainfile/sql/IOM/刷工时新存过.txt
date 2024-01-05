@@ -1,0 +1,13 @@
+--刷工时新存过
+   call gx_Oss.LJL_GSC_2022('shimin1');
+   select * from ljl_gsc;
+   
+   
+--刷工时池
+--call WORK_TIME_SINGLE('huangxueyi');--da_9881
+select a.*,rowid  from worktime_pool_time_config a;
+
+select ee.*,ee.rowid from om_worktime_pool ee where ee.staff_id=(select staff_id from uos_staff u where u.username='pansihong' )  --318554
+
+
+DELETE FROM om_worktime_pool ee where ee.staff_id=(select staff_id from uos_staff u where u.username='zhouxiaoqing1' )  --318554

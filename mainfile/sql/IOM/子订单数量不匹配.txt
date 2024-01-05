@@ -1,0 +1,6 @@
+--子订单数量不匹配 工单数量主表
+select a.*,rowid from om_group_construct_order a where a.group_order_code in('C-782-20220819-360803');
+--通过施工单编码id加入进去 23630075
+select  a.*,rowid  from om_group_construct_order_rela a  where a.group_order_id=24570184;  -- 16725477 11323708819261209 19354366 114081209
+
+select  a.*,rowid  from om_group_construct_order_rela a  where a.order_id=135420312;

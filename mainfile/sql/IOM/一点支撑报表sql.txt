@@ -1,0 +1,215 @@
+--PROC_PRORDER_TIMES
+select o.id,
+       o.order_code  as orderCode,
+       ua2.area_name as fengs,
+       ua.area_name  as dealArea,
+       us.staff_name as staffName,
+       
+       uo.org_name        as orgName,
+       po.IS_GIGA_BIT_VIP as isGigabitVIP,
+       po.contact_nbr     as contactNbr,
+       pt2.pr_type_name   as ppType1,
+       pt.pr_type_name    as ppType2,
+       
+       po.rela_acc_nbrs    as relaAccNbrs,
+       po.rela_order_codes as relaOrderCodes,
+       po.pr_desc          as prDesc,
+       
+       us2.staff_name      as partyName,
+       pa.help_staff_names as helpStaffNames,
+       
+       case
+         when w.tache_code = 'PS-CL' then
+          decode(w.work_order_state, '1WS', '待受理', '10I', '处理中')
+       
+         when w.tache_code = 'PS-BJQR' then
+          decode(w.work_order_state, '10I', '申请办结', '10F', '已办结')
+       
+       end as state,
+       to_char(o.create_date, 'yyyy-mm-dd hh24:mi:ss') as createDate,
+       
+       to_char(pa.first_response_date, 'yyyy-mm-dd hh24:mi:ss') as firstResponseDate,
+       to_char(pa.first_transfer_date, 'yyyy-mm-dd hh24:mi:ss') as firstTransferDate,
+       
+       to_char(pa.first_over_apply_date, 'yyyy-mm-dd hh24:mi:ss') as firstOverApplyDate,
+       
+       case
+         when w.tache_code = 'PS-BJQR' then
+          to_char(w2.finish_date, 'yyyy-mm-dd hh24:mi:ss')
+         else
+          null
+       end as finalOverApplyDate,
+       
+       decode(w.tache_code, 'PS-BJQR', w.finish_date) as overDate,
+       pa.deal_result as dealResult,
+       case
+         when w.tache_code = 'PS-BJQR' AND w.work_order_state = '10F' THEN
+          decode(pa.evaluate, null, 5, pa.evaluate)
+       END as evaluate,
+       
+       case
+         when po.final_pr_type_id is null then
+         
+          (select pr_type_name
+             from pb_problem_type
+            where pr_type_id = pt.pr_type_parent_id)
+       
+         else
+          (select pr_type_name
+             from pb_problem_type
+            where pr_type_id = pt3.pr_type_parent_id)
+       end as finalPPType1,
+       
+       case
+         when po.final_pr_type_id is null then
+          pt.pr_type_name
+         else
+          pt3.pr_type_name
+       end as finalPPType2,
+       
+       round(nvl(pa.response_times, 0) / 3600, 4) as response_times,
+       
+       round(nvl(pa.over_times, 0) / 3600, 4) as overTimes,
+       
+       case
+       
+         when pa.whole_times is not null then
+          round(pa.whole_times / 3600, 4)
+       
+         else
+          round((nvl(pa.response_times, 0) + nvl(pa.deal_times, 0) +
+                nvl(pa.over_times, 0)) / 3600,
+                4)
+       end as wholeTimes,
+       
+       case
+         when po.pr_level = '2' then
+          (case
+            when pa.response_times > act2.value * 60 then
+             '是'
+            else
+             '否'
+          end)
+         else
+          (case
+            when pa.response_times > g.value * 60 then
+             '是'
+            else
+             '否'
+          end)
+       end as isResponseOverTime,
+       
+       po.problem_solution as problemSolution,
+       po.pr_level as prLevel,
+       case
+         when po.pr_is_gigabit = '1' then
+          '是'
+         when po.pr_is_gigabit = '0' then
+          '否'
+         else
+          ''
+       end as isGigabit,
+       pa.first_accept_staff_name as firstAcceptStaffName,
+       decode(po.final_pr_type_id, null, '否', po.pr_type_id, '否', '是') as isPrTypeUpdated,
+       pa.FIRST_ACCEPT_STAFF_ORG_NAME as firstAcceptStaffOrgName,
+       nvl(pa.LAST_ACCEPT_STAFF_NAME, pa.first_accept_staff_name) as lastAcceptStaffName,
+       nvl(pa.LAST_ACCEPT_STAFF_ORG_NAME, pa.FIRST_ACCEPT_STAFF_ORG_NAME) as lastAcceptStaffOrgName,
+       pa.FIRST_DEAL_STAFF_ORG_NAME as firstDealStaffOrgName,
+       nvl(pa.LAST_ACCEPT_STAFF_NAME, pa.first_accept_staff_name) as lastDealStaffName,
+       nvl(pa.LAST_ACCEPT_STAFF_ORG_NAME, pa.FIRST_ACCEPT_STAFF_ORG_NAME) as lastDealStaffOrgName,
+       nvl(pa.LAST_ACCEPT_DATE, pa.first_response_date) as lastAcceptDate,
+       pa.FIRST_TRANSFER_STAFF_ORG_NAME as firstTransferStaffOrgName,
+       round(nvl(pa.LAST_ACCEPT_TIMES, pa.response_times) / 3600, 4) as lastAcceptTimes,
+       round(nvl(pa.LAST_DEAL_TIMES, pa.first_deal_times) / 3600, 4) as lastDealTimes,
+       nvl(decode(pa.LAST_ACCEPT_OVERTIME, '0', '否', '1', '是'),
+           (case
+             when pa.response_times > g.value * 60 then
+              '是'
+             else
+              '否'
+           end)) as lastAcceptOvertime,
+       decode(nvl(pa.LAST_DEAL_OVERTIME, pa.first_deal_overtime),
+              '0',
+              '否',
+              '1',
+              '是') as lastDealOvertime,
+       round(nvl(pa.first_deal_times, 0) / 60 / 60, 4) as dealTimes,
+       pa.audit_result_desc as auditResultDesc,
+       decode(pa.first_deal_overtime, '0', '否', '1', '是') as isDealOverTime,
+       to_char(po.sys_error_state_date, 'yyyy-mm-dd hh24:mi:ss') as sysErrorStateDate,
+       po.is_important_cust as isImportantCust
+
+  from om_order o
+
+  join pr_order po
+    on po.order_id = o.id
+
+  left join uos_area ua
+    on ua.area_id = o.area_id
+
+  left join uos_area ua2
+    on ua2.area_id = ua.parent_id
+
+  left join uos_staff us
+    on us.staff_id = po.create_staff_id
+
+  left join uos_staff us2
+    on us2.staff_id = po.deal_staff_id
+
+  left join uos_org uo
+    on uo.org_id = po.create_staff_org_id
+
+  left join pb_problem_type pt
+    on pt.pr_type_id = po.pr_type_id
+
+  left join pb_problem_type pt2
+    on pt2.pr_type_id = pt.pr_type_parent_id
+
+  left join pb_problem_type pt3
+    on pt3.pr_type_id = po.final_pr_type_id
+
+  join (
+        
+        select base_order_id,
+                party_name,
+                work_order_state,
+                tache_code,
+                finish_date,
+                
+                row_number() over(partition by base_order_id order by FINISH_DATE desc) as ranks
+          from wo_work_order
+        
+        ) w
+    on w.base_order_id = o.id
+   and w.ranks = 1
+
+  join (
+        
+        select base_order_id,
+                party_name,
+                work_order_state,
+                tache_code,
+                finish_date,
+                
+                row_number() over(partition by base_order_id order by FINISH_DATE desc) as ranks
+          from wo_work_order
+        
+        ) w2
+    on w2.base_order_id = o.id
+   and w2.ranks = 2
+
+  join pr_order_archives pa
+    on pa.order_id = o.id
+
+  join uos_config g
+    on g.name = 'ACCEPT_OVERTIME_VAL'
+
+  join uos_config act2
+    on act2.name = 'ACCEPT_OVERTIME_VAL_LEVEL_2'
+
+ where 1 = 1
+   and po.pr_is_jk = '0'
+   and o.finish_date >=
+       to_date('2023-11-19 00:00:00', 'YYYY-MM-DD hh24:mi:ss')
+   and o.finish_date <=
+       to_date('2023-11-19 23:59:59', 'YYYY-MM-DD hh24:mi:ss')
